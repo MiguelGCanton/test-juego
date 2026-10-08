@@ -2,6 +2,12 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-08 · Antigravity (Fase 7 — diseño)
+- Diseño completo de la **Fase 7 (MEC-06 · Estado visual de objetos)**: 13 tareas atómicas (T-36…T-48) en `docs/TAREAS.md` cubriendo contrato `VisualState` puro, implementación de `getVisualState()` en todas las estaciones, texturas variantes procedimentales, `WorldProgressBar`, `StationView` genérico, animaciones de feedback (pop, vibración, sacudida, destello, parpadeo), integración visual de camas/charcos y QA.
+- 5 nuevas decisiones arquitectónicas (DEC-019…DEC-023) en `docs/DECISIONES.md`: contrato puro `VisualState`, `StationView` genérico, texturas variantes como claves separadas, `WorldProgressBar` reutilizable, feedback de rechazo centralizado.
+- Placeholders para Fases 8 (mapa dinámico), 9 (NPCs torpes) y 10 (deterioro) en `docs/TAREAS.md`.
+- Actualizada referencia de tareas/decisiones en la sección de expansión de `docs/MECANICAS.md`.
+
 ## 2026-10-07 · Antigravity (T-35)
 - Implementada T-35: Balance final y matriz de control de calidad `docs/QA.md` con checklist de verificación para 1, 2 y 4 jugadores en ambos niveles, validando las 5 mecánicas principales, escalado dinámico, desconexión de mandos, síntesis de audio, onboarding y menú de pausa. **100% de tareas del proyecto completadas (Fases 0 a 6).**
 

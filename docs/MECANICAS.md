@@ -116,7 +116,7 @@ Equivalencias con Overcooked: pedido = paciente · ingredientes = gasas/viales/e
 
 # Expansión — Fases 7 a 10 (solo diseño)
 
-> Diseño de las mecánicas MEC-06…MEC-09. Tareas en [TAREAS.md](TAREAS.md) (T-36…T-63). Decisiones DEC-019…DEC-027 en [DECISIONES.md](DECISIONES.md).
+> Diseño de las mecánicas MEC-06…MEC-09. Tareas en [TAREAS.md](TAREAS.md) (T-36…T-48 Fase 7; T-49+ futuras). Decisiones DEC-019…DEC-023 en [DECISIONES.md](DECISIONES.md).
 > Principio común: **lógica pura sin Phaser** (testeable) + **vista Phaser** que solo dibuja el estado.
 
 ## MEC-06 · Estado visual de objetos (Fase 7)

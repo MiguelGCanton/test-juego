@@ -62,7 +62,39 @@ Leyenda: **S** < 1 h · **M** 1–2 h. Estado: `[ ]` libre · `[~]` en curso · 
 - [x] **T-34 · Onboarding del nivel 1** (M) — [2026-10-07 · Antigravity] Textos contextuales dinámicos y primeros 2 pacientes fijos (NIVELES §Nivel 1). Dep: T-19
 - [x] **T-35 · Balance y checklist QA** (M) — [2026-10-07 · Antigravity] Jugar ambos niveles con 1, 2 y 4 jugadores; matriz de pruebas `docs/QA.md` completada al 100% y cambios en CHANGELOG. Dep: T-30, T-32
 
+## Fase 7 — MEC-06 Estado visual de objetos
+- [ ] **T-36 · Contrato `VisualState` e interfaz** (S) — `src/world/VisualState.ts`: tipos `VisualActivity`, `ProgressKind`, interfaz `VisualState` y tipo `VisualStateProvider` (método `getVisualState(): VisualState`). Lógica pura sin Phaser. Test unitario que valide los tipos. Dep: —
+- [ ] **T-37 · `getVisualState()` en `Counter` y `ProcessStation`** (M) — Implementar `VisualStateProvider` en `Counter` (variante `base`, ítem apoyado) y `ProcessStation` (variantes `base`/`activa`, progreso de proceso, pausa). Tests unitarios: verificar que el estado refleja cada situación. Dep: T-36
+- [ ] **T-38 · `getVisualState()` en `Bed`** (M) — Implementar en `Bed`: variantes `base`/`asignada`/`ocupada`/`sucia`, progreso de tratamiento y limpieza, badge de código azul, workers para cirugía, campo `stain`. Tests unitarios para cada combinación de estado. Dep: T-36
+- [ ] **T-39 · `getVisualState()` en `Autoclave`, `SurgeryTable`, `XRayStation`** (M) — Implementar en las 3 estaciones: autoclave con variantes `vacio`/`esterilizando`/`listo`/`contaminado` y doble barra (proceso + contaminación); mesa quirúrgica con ranuras (slots), workers y progreso de cirugía; rayos X con progreso de escaneo. Tests unitarios. Dep: T-36
+- [ ] **T-40 · `getVisualState()` en el resto de estaciones** (M) — Implementar en `Dispenser` (M con selección visible), `TriageDesk` (progreso de triaje, badge "sin camas"), `ElectricPanel` (normal/avería/reparando), `DefibrillatorStation` (descargado/cargando/cargado), `Spill` (progreso de fregado). Tests unitarios. Dep: T-36
+- [ ] **T-41 · Texturas variantes procedimentales** (M) — En `TextureFactory`: generar variantes de textura para cada estación (`station-K-activa`, `station-B-sucia`, `station-A-esterilizando`, `station-A-listo`, `station-A-contaminado`, `station-U-averia`, `station-F-cargando`, etc.). Texturas desaturadas para estado deshabilitado (`station-*-disabled`). Dep: T-36
+- [ ] **T-42 · `WorldProgressBar` (componente Phaser)** (M) — `src/core/WorldProgressBar.ts`: barra de 48×6 px posicionable sobre cualquier celda, color por `ProgressKind` (proceso naranja, limpieza azul, tratamiento verde, carga amarillo, alerta rojo), modo atenuado (alpha 0.5 + icono pausa), ocultable. Se prueba visualmente. Dep: —
+- [ ] **T-43 · `StationView` (renderizador Phaser)** (M) — `src/world/StationView.ts`: componente genérico que lee `VisualState` de un `VisualStateProvider` cada frame y actualiza: textura de la estación según `variant`, icono de ítem apoyado (36 px con sombra), `WorldProgressBar`, badge (✔/⚠/⚡/💀), workers overlay. Un `StationView` por interactuable, creados en `GameScene` junto a cada estación. Dep: T-37, T-38, T-39, T-40, T-41, T-42
+- [ ] **T-44 · Animaciones de feedback — soltar/tomar ítem** (S) — En `StationView`: al detectar cambio de ítem en `VisualState`, animar *pop* de escala (1.2→1 en 0.12 s) al soltar, y vuelo del icono de estación a cabeza del jugador (0.1 s) al tomar. Integrar SFX `drop` y `pickup` existentes. Dep: T-43
+- [ ] **T-45 · Animaciones de feedback — procesando y pausa** (S) — En `StationView`: vibración ±1 px cuando `activity === 'working'`, barra atenuada con icono de pausa cuando `activity === 'paused'`, destello blanco 0.15 s + badge ✔ temporal al completar (`activity` pasa de `working` a `done`). Dep: T-43
+- [ ] **T-46 · Animaciones de feedback — alertas e invalidez** (S) — En `StationView`: parpadeo rojo 2 Hz del borde + badge ⚠ cuando `badge === 'warning'`, tinte gris + badge ⚡ cuando `activity === 'disabled'`, contorno rojo 0.25 s + sacudida ±3 px + SFX `error` (nuevo en `SoundManager`) para acción inválida. El contorno resaltado pasa de cian a gris cuando `canInteract` es falso. Dep: T-43, T-33
+- [ ] **T-47 · Integración visual de camas y charcos** (M) — Cama: sábana blanca en `limpia`, contorno del color del ticket en `asignada`, manchas que se desvanecen con progreso de limpieza (`stain = 1 − progress`). Charco: se encoge (`scale = 1 − 0.7·progress`) y se aclara al fregar. Dep: T-43, T-38
+- [ ] **T-48 · Test de integración visual y QA de Fase 7** (M) — Verificar que: todos los ítems apoyados son visibles, toda acción con duración muestra barra en el mundo, cada estación con proceso tiene aspecto distinto en reposo/trabajando/terminada, la limpieza de camas y charcos es progresiva. Actualizar `docs/QA.md` con sección de Fase 7. Dep: T-44, T-45, T-46, T-47
+
+## Fase 8 — MEC-07 Mapa dinámico (pendiente de diseño detallado de tareas)
+> Nivel 3 con fases temporales de mapa (`MapPhaseSpec`), celdas nuevas (`W` mampara, `~` inundación), `GridPathfinder` BFS, transiciones en caliente con avisos. Tareas T-49…T-55 se detallarán en la rama correspondiente.
+
+## Fase 9 — MEC-08 NPCs torpes (pendiente de diseño detallado de tareas)
+> NPCs `becario` y `visitante` con FSM pura `NpcBrain`, acciones avisadas, interrumpibles, supervisables. Requiere pathfinding de Fase 8. Tareas T-56…T-60 se detallarán en la rama correspondiente.
+
+## Fase 10 — MEC-09 Deterioro con el tiempo (pendiente de diseño detallado de tareas)
+> Ítems perecederos con frescura visual continua, `residuo`, camas que empeoran, charcos que se extienden, nevera `H` y contenedor `Z`. Tareas T-61…T-67 se detallarán en la rama correspondiente.
+
+---
+
 ## Camino crítico sugerido (para repartir en paralelo)
+
+### Fases 0–6 (completadas)
 - **Equipo A (mundo):** T-01 → T-04 → T-05 → T-06/T-07/T-08 → T-09/T-10 → T-11
 - **Equipo B (lógica pura):** T-02 → T-03 · T-12 → T-13 · T-17 · T-27 (todas testeables sin escena)
 - **Equipo C (cooperativo):** T-21 → T-22 → T-23/T-26
+
+### Fase 7
+- **Equipo A (contratos puros):** T-36 → T-37/T-38/T-39/T-40 (paralelo)
+- **Equipo B (rendering):** T-41, T-42 → T-43 → T-44/T-45/T-46/T-47 (paralelo) → T-48
