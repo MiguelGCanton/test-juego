@@ -152,4 +152,32 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.generateTexture('icon-stretcher', 32, 28);
     g.destroy();
   }
+
+  // 5. Textura completa para camilla 2x1 (112x50)
+  if (!scene.textures.exists('stretcher-body')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    // Marco metálico exterior
+    g.fillStyle(0x546e7a, 1);
+    g.fillRoundedRect(2, 2, 108, 46, 6);
+    g.lineStyle(2, 0xb0bec5, 1);
+    g.strokeRoundedRect(2, 2, 108, 46, 6);
+
+    // Colchón médico turquesa
+    g.fillStyle(0x1abc9c, 1);
+    g.fillRoundedRect(8, 8, 96, 34, 4);
+
+    // Almohada blanca a la izquierda
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(12, 12, 20, 26, 3);
+
+    // Ruedas / esquinas oscuras
+    g.fillStyle(0x263238, 1);
+    g.fillCircle(6, 6, 3);
+    g.fillCircle(106, 6, 3);
+    g.fillCircle(6, 44, 3);
+    g.fillCircle(106, 44, 3);
+
+    g.generateTexture('stretcher-body', 112, 50);
+    g.destroy();
+  }
 }

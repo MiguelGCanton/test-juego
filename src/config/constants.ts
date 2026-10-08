@@ -32,6 +32,16 @@ export const DASH_SPEED_MULTIPLIER = 2.5;
 export const DASH_DURATION_SEC = 0.18;
 export const DASH_COOLDOWN_SEC = 1.5;
 
+/** Parámetros de Camilla (MEC-03 / T-21 / T-22). */
+export const STRETCHER_SPEED = 180;
+export const STRETCHER_1P_SPEED_FACTOR = 0.7;
+export const STRETCHER_2P_1ATTACHED_FACTOR = 0.4;
+export const STRETCHER_2P_2ATTACHED_FACTOR = 1.0;
+export const STRETCHER_TRANSFER_TIME_SEC = 1.0;
+
+/** Parámetros de Rayos X (T-23). */
+export const XRAY_PROCESS_TIME_SEC = 4.0;
+
 /** Zona muerta para sticks analógicos. */
 export const GAMEPAD_DEADZONE = 0.25;
 

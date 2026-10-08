@@ -47,6 +47,17 @@ export class PatientView extends Phaser.GameObjects.Container {
   }
 
   public updateView(): void {
+    if (this.patient.state === 'EnCamilla') {
+      this.setVisible(false);
+      return;
+    }
+    this.setVisible(true);
+
+    if (this.patient.state === 'EnCama' && this.patient.assignedBedCell && !this.isWalking) {
+      const pos = cellToWorld(this.patient.assignedBedCell.col, this.patient.assignedBedCell.row);
+      this.setPosition(pos.x, pos.y);
+    }
+
     // 1. Actualizar barra de paciencia
     this.patienceBar.clear();
     const ratio = this.patient.patienceRatio;

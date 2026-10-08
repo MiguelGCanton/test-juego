@@ -40,9 +40,9 @@ Leyenda: **S** < 1 h · **M** 1–2 h. Estado: `[ ]` libre · `[~]` en curso · 
 - [x] **T-20 · Pausa** (S) — [2026-10-07 · Antigravity] `pause` abre overlay (reanudar / menú). Pausa también al perder foco. Dep: T-05
 
 ## Fase 3 — MEC-03 Camilla
-- [ ] **T-21 · Camilla y empuje cooperativo** (M) — `Stretcher` 2×1 (Arcade), engancharse con `grab`, movimiento = promedio de vectores de los enganchados (reglas de MEC-03, incluyendo modo 1 jugador). Dep: T-05, T-04
-- [ ] **T-22 · Cargar/descargar pacientes graves** (M) — `use` 1 s con camilla adyacente (paciente ↔ camilla ↔ cama/`X`/`Q`). Dep: T-21, T-14, T-16
-- [ ] **T-23 · Rayos X `X`** (S) — Receta `fractura`: escaneo 4 s con paciente en camilla adyacente. Dep: T-22, T-11
+- [x] **T-21 · Camilla y empuje cooperativo** (M) — [2026-10-07 · Antigravity] `Stretcher` 2×1 (Arcade), engancharse con `grab`, movimiento = promedio de vectores de los enganchados (reglas de MEC-03, incluyendo modo 1 jugador). Dep: T-05, T-04
+- [x] **T-22 · Cargar/descargar pacientes graves** (M) — [2026-10-07 · Antigravity] `use` 1 s con camilla adyacente (paciente ↔ camilla ↔ cama/`X`/`Q`). Dep: T-21, T-14, T-16
+- [x] **T-23 · Rayos X `X`** (S) — [2026-10-07 · Antigravity] Receta `fractura`: escaneo 4 s con paciente en camilla adyacente. Dep: T-22, T-11
 
 ## Fase 4 — MEC-04 Limpieza y esterilización
 - [ ] **T-24 · Limpieza de camas** (S) — Cama sucia bloquea triaje; `sabanas` + `use` 2 s la limpian. Dep: T-16, T-09

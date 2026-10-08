@@ -69,7 +69,10 @@ export class Bed implements Interactable {
   public getRequiredItemType(): ItemType | null {
     if (!this.patient) return null;
     const ailment = this.patient.ailment.id;
-    if (ailment === 'herida' || ailment === 'fractura') return 'venda';
+    if (ailment === 'herida') return 'venda';
+    if (ailment === 'fractura') {
+      return this.patient.xrayCompleted ? 'venda' : null;
+    }
     if (ailment === 'fiebre') return 'jeringa';
     return null;
   }

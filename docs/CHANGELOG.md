@@ -2,6 +2,15 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-07 · Antigravity (T-23)
+- Implementada T-23: Estación de Rayos X `XRayStation` (`src/world/XRayStation.ts`) para la receta `fractura`, con escaneo sostenido de 4 segundos sobre pacientes en camilla adyacente, completado de diagnóstico y habilitación de vendaje en cama. Tests unitarios en `XRayStation.test.ts`. Completada la **Fase 3 (MEC-03 Camilla)**.
+
+## 2026-10-07 · Antigravity (T-22)
+- Implementada T-22: Transferencia y carga/descarga de pacientes graves (`use` 1.0 s) entre puerta de entrada/triaje, camilla y camas limpias con barra visual de progreso de transferencia. Lógica pura en `StretcherLogic.ts` y tests unitarios en `Stretcher.test.ts`.
+
+## 2026-10-07 · Antigravity (T-21)
+- Implementada T-21: Entidad física `Stretcher` (`src/world/Stretcher.ts`) y física pura `StretcherLogic` (`src/world/StretcherLogic.ts`) con empuje cooperativo de hasta 2 jugadores, vector promedio de movimiento, escalado por número de jugadores (1P: 70%, 2P 1 enganchado: 40%, 2P 2 enganchados: 100%), arrastre físico y bloqueo de dash al empujar. Tests unitarios en `Stretcher.test.ts`.
+
 ## 2026-10-07 · Antigravity (T-20)
 - Implementada T-20: Menú de pausa interactivo en `GameScene` activable por botón de pausa o pérdida de foco (`blur`), con opciones de Reanudar, Reintentar y Salir al menú. Completada la **Fase 2 (MEC-01 Triaje y pacientes)**.
 

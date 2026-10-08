@@ -13,6 +13,8 @@ import { Counter } from '../world/Counter';
 import { ProcessStation } from '../world/ProcessStation';
 import { Bed } from '../world/Bed';
 import { TriageDesk } from '../world/TriageDesk';
+import { Stretcher } from '../world/Stretcher';
+import { XRayStation } from '../world/XRayStation';
 import { PatientSpawner } from '../patients/PatientSpawner';
 import { PatientView } from '../patients/PatientView';
 import { ScoreTracker } from '../core/Scoring';
@@ -20,7 +22,7 @@ import { addText } from '../core/ui';
 
 /**
  * ESCENA DE JUEGO.
- * Orquesta la física, el mapa, los jugadores, estaciones interactivas, triaje, pacientes, pausa y HUD.
+ * Orquesta la física, el mapa, los jugadores, estaciones interactivas, camilla, rayos X, triaje, pacientes, pausa y HUD.
  */
 export class GameScene extends Phaser.Scene {
   private levelId = '';
@@ -30,6 +32,8 @@ export class GameScene extends Phaser.Scene {
   public interactables = new Map<string, Interactable>();
   public beds: Bed[] = [];
   public triageDesks: TriageDesk[] = [];
+  public xRayStations: XRayStation[] = [];
+  public stretcher!: Stretcher;
 
   public spawner!: PatientSpawner;
   public patientViews = new Map<string, PatientView>();
@@ -121,6 +125,19 @@ export class GameScene extends Phaser.Scene {
         });
         this.beds.push(bed);
         this.interactables.set(key, bed);
+      } else if (st.char === 'X') {
+        const xRay = new XRayStation(
+          { col: st.col, row: st.row },
+          () => this.stretcher,
+          (patient) => {
+            this.events.emit('hud:message', {
+              text: `¡Rayos X completado para ${patient.ailment.name}!`,
+              color: '#3498db',
+            });
+          }
+        );
+        this.xRayStations.push(xRay);
+        this.interactables.set(key, xRay);
       } else if (st.char === 'R') {
         const desk = new TriageDesk(
           { col: st.col, row: st.row },
@@ -175,14 +192,22 @@ export class GameScene extends Phaser.Scene {
       this.physics.add.collider(player, this.obstacles);
     });
 
-    const playerArray = Array.from(this.players.values());
-    for (let i = 0; i < playerArray.length; i++) {
-      for (let j = i + 1; j < playerArray.length; j++) {
-        this.physics.add.collider(playerArray[i], playerArray[j]);
-      }
-    }
+    // 8. Spawn de Camilla (MEC-03 / T-21)
+    const stSpawn = this.parsedLevel.stretcherSpawns[0] ?? { col: 4, row: 8 };
+    const stWorld = cellToWorld(stSpawn.col, stSpawn.row);
+    this.stretcher = new Stretcher(this, stWorld.x, stWorld.y);
 
-    // 8. Crear overlay de pausa (T-20)
+    this.physics.add.collider(this.stretcher, this.obstacles);
+    this.players.forEach((player) => {
+      this.physics.add.collider(
+        player,
+        this.stretcher,
+        undefined,
+        () => !this.stretcher.isAttached(player)
+      );
+    });
+
+    // 9. Crear overlay de pausa (T-20)
     this.createPauseOverlay();
 
     // 9. Pausar al perder foco de ventana
@@ -368,11 +393,32 @@ export class GameScene extends Phaser.Scene {
     }));
     this.events.emit('hud:orders', { tickets });
 
+    // Comprobar si el paciente en camilla se perdió por falta de paciencia
+    if (this.stretcher.patient?.state === 'Perdido') {
+      const lost = this.stretcher.releasePatient()!;
+      this.scoreTracker.addPatientLost();
+      const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+      this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
+      this.events.emit('hud:message', { text: '¡Paciente en camilla perdido! -50 pts', color: '#e74c3c' });
+
+      if (lost.assignedBedCell) {
+        const bed = this.beds.find((b) => b.cell.col === lost.assignedBedCell?.col && b.cell.row === lost.assignedBedCell?.row);
+        bed?.releasePatient(false);
+      }
+
+      const view = this.patientViews.get(lost.id);
+      view?.destroy();
+      this.patientViews.delete(lost.id);
+      this.spawner.removePatient(lost.id);
+    }
+
     // 3. Jugadores e interacción
     this.targetHighlights.clear();
+    const inputFrames = new Map<string, import('../input/types').InputFrame>();
 
     for (const slot of getRoster(this).players) {
       const frame = input.read(slot.deviceId);
+      inputFrames.set(slot.deviceId, frame);
       const player = this.players.get(slot.deviceId);
       if (!player) continue;
 
@@ -392,7 +438,12 @@ export class GameScene extends Phaser.Scene {
       this.targetHighlights.lineStyle(2, strokeColor, 0.6);
       this.targetHighlights.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
 
-      if (interactable) {
+      const isNearStretcher = this.stretcher.isAdjacentToWorld(player.x, player.y);
+
+      // Enganche / desenganche de camilla con GRAB
+      if (frame.grabPressed && isNearStretcher && !player.hasItem()) {
+        this.stretcher.toggleAttachPlayer(player);
+      } else if (interactable) {
         const ctx = { player, cell: targetCell };
 
         if (frame.grabPressed) {
@@ -411,7 +462,58 @@ export class GameScene extends Phaser.Scene {
           interactable.onUseEnd?.(ctx);
         }
       }
+
+      // Carga / descarga de pacientes en camilla con USE mantenido
+      if (isNearStretcher && frame.use) {
+        if (!this.stretcher.isOccupied) {
+          // Buscar paciente grave esperando cerca
+          const severePatient = this.spawner.activePatients.find(
+            (p) => p.isSevere && (p.state === 'Esperando' || p.state === 'Triado')
+          );
+          if (severePatient) {
+            const completed = this.stretcher.transferTimer.advance(deltaSec);
+            this.stretcher.renderTransferProgress(this.stretcher.transferTimer.progress);
+            if (completed) {
+              this.stretcher.transferTimer.reset();
+              this.stretcher.clearTransferProgress();
+              this.stretcher.loadPatient(severePatient);
+              this.events.emit('hud:message', { text: '¡Paciente cargado en camilla!', color: '#2ec4b6' });
+            }
+          }
+        } else {
+          // Camilla ocupada: buscar cama limpia adyacente para transferir
+          const adjacentBed = this.beds.find(
+            (b) => this.stretcher.isAdjacentToCell(b.cell) && b.isClean
+          );
+          if (adjacentBed) {
+            const completed = this.stretcher.transferTimer.advance(deltaSec);
+            this.stretcher.renderTransferProgress(this.stretcher.transferTimer.progress);
+            if (completed) {
+              this.stretcher.transferTimer.reset();
+              this.stretcher.clearTransferProgress();
+              this.stretcher.unloadToBed(adjacentBed);
+              this.events.emit('hud:message', {
+                text: `¡Paciente transferido a cama (${adjacentBed.cell.col}, ${adjacentBed.cell.row})!`,
+                color: '#2ecc71',
+              });
+            }
+          }
+        }
+      }
+
+      if (frame.useReleased && isNearStretcher) {
+        this.stretcher.transferTimer.reset();
+        this.stretcher.clearTransferProgress();
+      }
     }
+
+    // 4. Actualización física y arrastre de la camilla cooperativa (T-21)
+    this.stretcher.updateStretcher(
+      inputFrames,
+      this.players,
+      getRoster(this).players.length,
+      deltaSec
+    );
   }
 
   private finishLevel(): void {

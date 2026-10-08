@@ -5,6 +5,7 @@ export type Severity = 'leve' | 'grave';
 export type PatientState =
   | 'Esperando'
   | 'Triado'
+  | 'EnCamilla'
   | 'EnCama'
   | 'EnTratamiento'
   | 'Alta'
@@ -72,6 +73,7 @@ export class Patient {
 
   public assignedBedCell: GridPos | null = null;
   public currentStepIndex = 0;
+  public xrayCompleted = false;
 
   constructor(ailmentType: AilmentType, id?: string) {
     this.ailment = AILMENTS[ailmentType];
@@ -116,8 +118,20 @@ export class Patient {
     return true;
   }
 
+  public loadOntoStretcher(): boolean {
+    if (this.state !== 'Esperando' && this.state !== 'Triado') return false;
+    this.state = 'EnCamilla';
+    return true;
+  }
+
+  public completeXRay(): boolean {
+    if (this.ailment.id !== 'fractura') return false;
+    this.xrayCompleted = true;
+    return true;
+  }
+
   public putInBed(): boolean {
-    if (this.state !== 'Triado' && this.state !== 'Esperando') return false;
+    if (this.state !== 'Triado' && this.state !== 'Esperando' && this.state !== 'EnCamilla') return false;
     this.state = 'EnCama';
     return true;
   }
