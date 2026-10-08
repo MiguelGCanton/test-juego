@@ -4,11 +4,13 @@ import type { Patient } from '../patients/Patient';
 import type { Item } from '../items/Item';
 import type { ItemType } from '../items/ItemType';
 import { ProgressTimer } from '../core/ProgressTimer';
+import { BED_CLEANING_TIME_SEC } from '../config/constants';
 
 export type BedState = 'limpia' | 'ocupada' | 'sucia';
 
 /**
  * Cama 'B' del hospital donde se alojan, tratan y dan de alta a los pacientes.
+ * Tras el alta pasa a 'sucia' y debe ser limpiada con 'sabanas' durante 2 segundos.
  */
 export class Bed implements Interactable {
   public readonly cell: GridPos;
@@ -20,6 +22,10 @@ export class Bed implements Interactable {
   // Temporizador de tratamiento en cama (1.5 s)
   public readonly treatmentTimer = new ProgressTimer(1.5);
   public isTreating = false;
+
+  // Temporizador de limpieza de cama sucia (2.0 s con sábanas)
+  public readonly cleaningTimer = new ProgressTimer(BED_CLEANING_TIME_SEC);
+  public isCleaning = false;
 
   private onDischargeCallback?: (patient: Patient, bed: Bed) => void;
 
@@ -54,12 +60,15 @@ export class Bed implements Interactable {
     this.state = dirtyAfterward ? 'sucia' : 'limpia';
     this.treatmentTimer.reset();
     this.isTreating = false;
+    this.isCleaning = false;
     return p;
   }
 
   public clean(): boolean {
     if (this.state !== 'sucia') return false;
     this.state = 'limpia';
+    this.cleaningTimer.reset();
+    this.isCleaning = false;
     return true;
   }
 
@@ -78,6 +87,22 @@ export class Bed implements Interactable {
   }
 
   public onUseHold(ctx: InteractionContext, deltaSec: number): void {
+    // 1. Limpieza de cama sucia con sábanas
+    if (this.isDirty) {
+      if (ctx.player.carriedItem?.type === 'sabanas') {
+        this.isCleaning = true;
+        const cleaned = this.cleaningTimer.advance(deltaSec);
+        if (cleaned) {
+          ctx.player.drop(); // Consumir sábanas limpias
+          this.clean();
+        }
+      } else {
+        this.isCleaning = false;
+      }
+      return;
+    }
+
+    // 2. Tratamiento de paciente en cama
     if (!this.patient || this.patient.state === 'Esperando' || this.patient.state === 'Alta' || this.patient.state === 'Perdido') {
       this.isTreating = false;
       return;
@@ -114,6 +139,7 @@ export class Bed implements Interactable {
   }
 
   public onUseEnd(_ctx: InteractionContext): void {
+    this.isCleaning = false;
     if (this.isTreating && this.patient) {
       this.isTreating = false;
       this.patient.stopTreatment();
@@ -121,7 +147,9 @@ export class Bed implements Interactable {
   }
 
   public canInteract(ctx: InteractionContext): boolean {
-    if (this.isDirty) return true;
+    if (this.isDirty) {
+      return ctx.player.carriedItem?.type === 'sabanas';
+    }
     if (this.isOccupied) {
       const req = this.getRequiredItemType();
       if (!req) return true;

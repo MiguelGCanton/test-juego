@@ -15,6 +15,8 @@ import { Bed } from '../world/Bed';
 import { TriageDesk } from '../world/TriageDesk';
 import { Stretcher } from '../world/Stretcher';
 import { XRayStation } from '../world/XRayStation';
+import { Autoclave } from '../world/Autoclave';
+import { SurgeryTable } from '../world/SurgeryTable';
 import { PatientSpawner } from '../patients/PatientSpawner';
 import { PatientView } from '../patients/PatientView';
 import { ScoreTracker } from '../core/Scoring';
@@ -22,7 +24,7 @@ import { addText } from '../core/ui';
 
 /**
  * ESCENA DE JUEGO.
- * Orquesta la física, el mapa, los jugadores, estaciones interactivas, camilla, rayos X, triaje, pacientes, pausa y HUD.
+ * Orquesta la física, el mapa, los jugadores, estaciones interactivas, camilla, rayos X, autoclave, cirugía, triaje, pacientes, pausa y HUD.
  */
 export class GameScene extends Phaser.Scene {
   private levelId = '';
@@ -33,6 +35,8 @@ export class GameScene extends Phaser.Scene {
   public beds: Bed[] = [];
   public triageDesks: TriageDesk[] = [];
   public xRayStations: XRayStation[] = [];
+  public autoclaves: Autoclave[] = [];
+  public surgeryTables: SurgeryTable[] = [];
   public stretcher!: Stretcher;
 
   public spawner!: PatientSpawner;
@@ -138,6 +142,37 @@ export class GameScene extends Phaser.Scene {
         );
         this.xRayStations.push(xRay);
         this.interactables.set(key, xRay);
+      } else if (st.char === 'A') {
+        const auto = new Autoclave(
+          { col: st.col, row: st.row },
+          () => {
+            this.events.emit('hud:message', {
+              text: '¡Autoclave: instrumental esterilizado!',
+              color: '#58d68d',
+            });
+          },
+          () => {
+            this.events.emit('hud:message', {
+              text: '¡Atención! Instrumental contaminado en autoclave',
+              color: '#e74c3c',
+            });
+          }
+        );
+        this.autoclaves.push(auto);
+        this.interactables.set(key, auto);
+      } else if (st.char === 'Q') {
+        const isFirstQ = this.surgeryTables.length === 0;
+        const surgery = new SurgeryTable(
+          { col: st.col, row: st.row },
+          () => this.stretcher,
+          () => getRoster(this).players.length,
+          isFirstQ, // Nivel 2 arranca con 1 instrumental limpio
+          (patient) => {
+            this.handlePatientDischarge(patient);
+          }
+        );
+        this.surgeryTables.push(surgery);
+        this.interactables.set(key, surgery);
       } else if (st.char === 'R') {
         const desk = new TriageDesk(
           { col: st.col, row: st.row },
@@ -271,7 +306,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private handlePatientDischarge(patient: import('../patients/Patient').Patient, _bed: Bed): void {
+  private handlePatientDischarge(patient: import('../patients/Patient').Patient, _bed?: Bed): void {
+    if (this.stretcher && this.stretcher.patient?.id === patient.id) {
+      this.stretcher.releasePatient();
+    }
+
     const points = this.scoreTracker.addDischarge(patient);
     const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
 
@@ -298,6 +337,9 @@ export class GameScene extends Phaser.Scene {
     const deltaSec = delta / 1000;
     const input = getInput(this);
     input.update();
+
+    // Actualizar autoclaves (MEC-04 / T-25)
+    this.autoclaves.forEach((a) => a.update(deltaSec));
 
     // Gestión del menú de pausa cuando el juego está pausado
     if (this.isPaused) {

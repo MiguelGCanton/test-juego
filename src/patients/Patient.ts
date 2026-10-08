@@ -149,7 +149,7 @@ export class Patient {
   }
 
   public discharge(): boolean {
-    if (this.state !== 'EnTratamiento' && this.state !== 'EnCama') return false;
+    if (this.state === 'Alta' || this.state === 'Perdido') return false;
     this.state = 'Alta';
     return true;
   }

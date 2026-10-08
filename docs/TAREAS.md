@@ -45,9 +45,9 @@ Leyenda: **S** < 1 h · **M** 1–2 h. Estado: `[ ]` libre · `[~]` en curso · 
 - [x] **T-23 · Rayos X `X`** (S) — [2026-10-07 · Antigravity] Receta `fractura`: escaneo 4 s con paciente en camilla adyacente. Dep: T-22, T-11
 
 ## Fase 4 — MEC-04 Limpieza y esterilización
-- [ ] **T-24 · Limpieza de camas** (S) — Cama sucia bloquea triaje; `sabanas` + `use` 2 s la limpian. Dep: T-16, T-09
-- [ ] **T-25 · Ciclo de instrumental** (M) — `A` autoclave (8 s automáticos, campana, contaminación a los 20 s), integración con `L` (T-11). Item `instrumental_*`. Dep: T-11
-- [ ] **T-26 · Mesa quirúrgica `Q` y cirugía** (M) — Requiere `instrumental_limpio` + `anestesia` + paciente en camilla; operar 6 s con **2 jugadores** a la vez (1 jugador: ver NIVELES §Escalado). Produce `instrumental_sucio`. Dep: T-25, T-22
+- [x] **T-24 · Limpieza de camas** (S) — [2026-10-07 · Antigravity] Cama sucia bloquea triaje; `sabanas` + `use` 2 s la limpian. Dep: T-16, T-09
+- [x] **T-25 · Ciclo de instrumental** (M) — [2026-10-07 · Antigravity] `A` autoclave (8 s automáticos, campana, contaminación a los 20 s), integración con `L` (T-11). Item `instrumental_*`. Dep: T-11
+- [x] **T-26 · Mesa quirúrgica `Q` y cirugía** (M) — [2026-10-07 · Antigravity] Requiere `instrumental_limpio` + `anestesia` + paciente en camilla; operar 6 s con **2 jugadores** a la vez (1 jugador: ver NIVELES §Escalado). Produce `instrumental_sucio`. Dep: T-25, T-22
 
 ## Fase 5 — MEC-05 Emergencias
 - [ ] **T-27 · EventDirector** (M) — Planificador de `LevelData.events` (lógica pura + tests con reloj simulado: `firstAtSec`, intervalos, un evento activo por tipo). Emite eventos `event:start/end`. Dep: T-03

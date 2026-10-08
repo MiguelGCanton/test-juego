@@ -55,4 +55,33 @@ describe('Bed (Cama B) & Treatment', () => {
     expect(bed.isTreating).toBe(false);
     expect(patient.state).toBe('EnCama');
   });
+
+  it('permite limpiar una cama sucia con sábanas tras 2.0 s de uso continuo', () => {
+    const bed = new Bed({ col: 1, row: 1 });
+    bed.state = 'sucia';
+    expect(bed.isDirty).toBe(true);
+    expect(bed.isClean).toBe(false);
+
+    let carriedItem: Item | null = new Item('sabanas');
+    const fakePlayer = {
+      carriedItem,
+      drop: () => {
+        const it = carriedItem;
+        carriedItem = null;
+        return it;
+      },
+    };
+
+    // 1.0 s: avanza pero sigue sucia
+    bed.onUseHold({ player: fakePlayer as any, cell: { col: 1, row: 1 } }, 1.0);
+    expect(bed.isCleaning).toBe(true);
+    expect(bed.state).toBe('sucia');
+    expect(carriedItem).not.toBeNull();
+
+    // 1.0 s más (total 2.0 s) -> limpia la cama y consume sábanas
+    bed.onUseHold({ player: fakePlayer as any, cell: { col: 1, row: 1 } }, 1.0);
+    expect(bed.state).toBe('limpia');
+    expect(bed.isClean).toBe(true);
+    expect(carriedItem).toBeNull();
+  });
 });

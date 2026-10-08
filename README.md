@@ -46,7 +46,21 @@ npm run build      # Compilación para producción
    - Acércate a la cama con el ítem requerido y mantén <kbd>Usar</kbd> (1.5 s).
    - El paciente recibe el alta, camina hacia la salida (`E`) y otorga puntos según la paciencia restante.
    - La cama queda en estado `sucia`.
-8. **Puntuación y Estrellas:** Obtén 1, 2 o 3 estrellas superando los umbrales de puntuación del nivel antes de que se agote el tiempo. Si la paciencia de un paciente llega a 0, se pierde y penaliza con −50 puntos.
+8. **Limpieza de Camas Sucias (`M` $\rightarrow$ `B`):**
+   - Las camas sucias bloquean nuevas asignaciones de triaje.
+   - Toma **Sábanas Limpias** en el armario de limpieza `M` (conmuta entre sábana y mopa con <kbd>Usar</kbd> y recoge con <kbd>Agarrar</kbd>).
+   - Frente a la cama sucia, mantén <kbd>Usar</kbd> durante 2.0 s para limpiarla y dejarla lista.
+9. **Mesa Quirúrgica y Cirugía (`Q`):**
+   - Para pacientes con dolencia de **Cirugía** (Nivel 2), trasládalos en camilla junto a la mesa quirúrgica `Q`.
+   - Suministra 1 **Instrumental Limpio** y 1 **Anestesia** (`N`) en la mesa `Q`.
+   - Realiza la operación (<kbd>Usar</kbd> 6.0 s) requiriendo **2 cirujanos coordinados** a la vez (1 en modo solitario).
+   - La intervención cura al paciente y produce 1 **Instrumental Sucio**.
+10. **Ciclo de Esterilización de Instrumental (`Q` $\rightarrow$ `L` $\rightarrow$ `A` $\rightarrow$ `Q`):**
+    - Toma el instrumental sucio de `Q` con <kbd>Agarrar</kbd>.
+    - Lávalo en el lavabo `L` manteniendo <kbd>Usar</kbd> 3 s $\rightarrow$ **Instrumental Mojado**.
+    - Colócalo en el **Autoclave (`A`)** con <kbd>Agarrar</kbd>; se esteriliza automáticamente durante 8 segundos $\rightarrow$ **Instrumental Limpio**.
+    - ¡Cuidado! Si el instrumental limpio permanece más de 20 segundos sin recogerse en el autoclave, se contamina y vuelve a estar sucio.
+11. **Puntuación y Estrellas:** Obtén 1, 2 o 3 estrellas superando los umbrales de puntuación del nivel antes de que se agote el tiempo. Si la paciencia de un paciente llega a 0, se pierde y penaliza con −50 puntos.
 
 ---
 
@@ -83,6 +97,13 @@ npm run build      # Compilación para producción
 - Carga y descarga de pacientes graves entre entrada, camilla y camas mediante <kbd>Usar</kbd> (1 s).
 - Estación de Rayos X (`X`) con escaneo de 4 segundos para pacientes con fractura en camilla.
 - Bloqueo de Dash al empujar la camilla y arrastre coordinado de jugadores.
+
+### ✅ Fase 4 — Esterilización y Limpieza (MEC-04)
+- Limpieza de camas sucias en `Bed` con sábanas limpias (<kbd>Usar</kbd> 2.0 s).
+- Bloqueo inteligente de triaje cuando todas las camas están ocupadas o sucias.
+- Estación `Autoclave` (`A`) con ciclo de esterilización automática de 8.0 s y alarma/temporizador de contaminación a los 20.0 s.
+- Mesa Quirúrgica `SurgeryTable` (`Q`) con intervención coordinada de 6.0 s (2 cirujanos en multijugador), consumo de suministros y generación de instrumental sucio.
+- Ciclo cerrado de instrumental quirúrgico (`Q` $\rightarrow$ `L` $\rightarrow$ `A` $\rightarrow$ `Q`).
 
 ---
 

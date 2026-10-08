@@ -42,6 +42,12 @@ export const STRETCHER_TRANSFER_TIME_SEC = 1.0;
 /** Parámetros de Rayos X (T-23). */
 export const XRAY_PROCESS_TIME_SEC = 4.0;
 
+/** Parámetros de Limpieza y Esterilización (MEC-04 / T-24 / T-25 / T-26). */
+export const BED_CLEANING_TIME_SEC = 2.0;
+export const AUTOCLAVE_PROCESS_TIME_SEC = 8.0;
+export const AUTOCLAVE_CONTAMINATION_TIME_SEC = 20.0;
+export const SURGERY_DURATION_SEC = 6.0;
+
 /** Zona muerta para sticks analógicos. */
 export const GAMEPAD_DEADZONE = 0.25;
 

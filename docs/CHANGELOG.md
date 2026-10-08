@@ -2,6 +2,15 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-07 · Antigravity (T-26)
+- Implementada T-26: Mesa Quirúrgica `SurgeryTable` (`src/world/SurgeryTable.ts`) para la dolencia `cirugia`, requiriendo `instrumental_limpio` + `anestesia` + paciente en camilla adyacente, operación sostenida de 6 segundos coordinada (2 jugadores simultáneos en multijugador, 1 en solitario) y producción de `instrumental_sucio` tras la intervención. Tests unitarios en `SurgeryTable.test.ts`. Completada la **Fase 4 (MEC-04 Limpieza y esterilización)**.
+
+## 2026-10-07 · Antigravity (T-25)
+- Implementada T-25: Autoclave `Autoclave` (`src/world/Autoclave.ts`) para esterilización automática de `instrumental_mojado` durante 8 segundos a `instrumental_limpio`, con temporizador de contaminación que revierte a `instrumental_sucio` a los 20 segundos de abandono e integración con lavabo `L`. Tests unitarios en `Autoclave.test.ts`.
+
+## 2026-10-07 · Antigravity (T-24)
+- Implementada T-24: Limpieza de camas sucias en `Bed` (`src/world/Bed.ts`) requiriendo `sabanas` (del dispensador `M`) y 2.0 segundos de uso continuo para rehabilitar camas a estado `limpia`. Tests unitarios en `Bed.test.ts`.
+
 ## 2026-10-07 · Antigravity (T-23)
 - Implementada T-23: Estación de Rayos X `XRayStation` (`src/world/XRayStation.ts`) para la receta `fractura`, con escaneo sostenido de 4 segundos sobre pacientes en camilla adyacente, completado de diagnóstico y habilitación de vendaje en cama. Tests unitarios en `XRayStation.test.ts`. Completada la **Fase 3 (MEC-03 Camilla)**.
 
