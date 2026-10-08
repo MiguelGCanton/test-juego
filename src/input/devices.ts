@@ -7,7 +7,7 @@ const heldKeys = new Set<string>();
 let keyboardListening = false;
 
 function ensureKeyboardListeners(): void {
-  if (keyboardListening) return;
+  if (typeof window === 'undefined' || keyboardListening) return;
   keyboardListening = true;
   window.addEventListener('keydown', (e) => {
     heldKeys.add(e.code);

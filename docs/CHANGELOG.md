@@ -2,6 +2,33 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-07 · Antigravity (T-35)
+- Implementada T-35: Balance final y matriz de control de calidad `docs/QA.md` con checklist de verificación para 1, 2 y 4 jugadores en ambos niveles, validando las 5 mecánicas principales, escalado dinámico, desconexión de mandos, síntesis de audio, onboarding y menú de pausa. **100% de tareas del proyecto completadas (Fases 0 a 6).**
+
+## 2026-10-07 · Antigravity (T-34)
+- Implementada T-34: Sistema de Onboarding en Nivel 1 con generación inicial fija (1º herida, 2º fiebre, fractura bloqueada < 45 s) y banner dinámico guiado paso a paso con instrucciones contextuales en la parte inferior de la pantalla. Tests en `PatientSpawner.test.ts`.
+
+## 2026-10-07 · Antigravity (T-33)
+- Implementada T-33: Gestor de efectos de sonido procedurales `SoundManager` (`src/core/SoundManager.ts`) mediante WebAudio API (osciladores y envolventes), cubriendo tomar/soltar ítems, procesos completados, alta de pacientes, pérdida de pacientes, alarmas de emergencia, dash, resbalón, descargas de desfibrilador y navegación de menús con soporte headless. Tests en `SoundManager.test.ts`.
+
+## 2026-10-07 · Antigravity (T-32)
+- Implementada T-32: Escalado de dificultad según número de jugadores en `PatientSpawner` y estaciones de trabajo (1P: `maxPatients` -1, camilla 70% vel., 1 cirujano / 1 reanimador; 3-4P: intervalo de pedidos × 0.85). Tests unitarios en `PatientSpawner.test.ts`.
+
+## 2026-10-07 · Antigravity (T-31)
+- Implementada T-31: Detección y notificación de mandos/gamepads desconectados en `InputManager` (`src/input/InputManager.ts`) y `GameScene`, pausando el juego automáticamente y mostrando el banner `⚠️ Mando de P# desconectado. Por favor, reconéctalo para continuar` impidiendo reanudar hasta reconectar. Tests unitarios en `InputManager.test.ts`.
+
+## 2026-10-07 · Antigravity (T-30)
+- Implementada T-30: Estación de Desfibrilador `DefibrillatorStation` (`src/world/DefibrillatorStation.ts`) y gestor `CodeBlueManager` (`src/events/CodeBlueManager.ts`) para emergencias de Código Azul, requiriendo carga en `F` (3 s), ítem pesado `desfibrilador` (-30% velocidad), reanimación conjunta en cama (2 s con 2 jugadores en multijugador o 1 en solitario) con bonificación de +200 pts en éxito o -150 pts y paciente perdido en fallo tras 25 s. Tests unitarios en `CodeBlue.test.ts`. Completada la **Fase 5 (MEC-05 Emergencias)**.
+
+## 2026-10-07 · Antigravity (T-29)
+- Implementada T-29: Cuadro Eléctrico `ElectricPanel` (`src/world/ElectricPanel.ts`) para resolver apagones (`blackout`), desactivando temporalmente estaciones de proceso y oscureciendo la pantalla con foco visual, con reparación manual de 3.0 s en `U` o auto-resolución tras 25 s. Tests unitarios en `ElectricPanel.test.ts`.
+
+## 2026-10-07 · Antigravity (T-28)
+- Implementada T-28: Charco de derrame `Spill` (`src/world/Spill.ts`) con resbalón forzado de 0.6 s y soltado de ítem en `Player` (inmune durante el dash según DEC-016), y limpieza sostenida con `mopa` durante 2.0 s. Tests unitarios en `Spill.test.ts`.
+
+## 2026-10-07 · Antigravity (T-27)
+- Implementada T-27: Planificador de eventos `EventDirector` (`src/events/EventDirector.ts`) con lógica pura para temporización y disparo de emergencias según `LevelData.events` (`firstAtSec`, intervalos `everySec` y límite de 1 evento simultáneo por tipo). Tests unitarios en `EventDirector.test.ts`.
+
 ## 2026-10-07 · Antigravity (T-26)
 - Implementada T-26: Mesa Quirúrgica `SurgeryTable` (`src/world/SurgeryTable.ts`) para la dolencia `cirugia`, requiriendo `instrumental_limpio` + `anestesia` + paciente en camilla adyacente, operación sostenida de 6 segundos coordinada (2 jugadores simultáneos en multijugador, 1 en solitario) y producción de `instrumental_sucio` tras la intervención. Tests unitarios en `SurgeryTable.test.ts`. Completada la **Fase 4 (MEC-04 Limpieza y esterilización)**.
 

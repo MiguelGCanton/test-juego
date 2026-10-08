@@ -12,6 +12,7 @@ import {
 import type { InputFrame } from '../input/types';
 import type { Item } from '../items/Item';
 import type { PlayerSlot } from './Roster';
+import { getSound } from '../core/services';
 
 export type CardinalDirection = 'up' | 'down' | 'left' | 'right';
 
@@ -34,6 +35,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public dashCooldown = 0;
   public dashVector = { x: 0, y: 1 };
   public canDash = true;
+
+  // Estado de Resbalón por charco (T-28)
+  public slipTimer = 0;
+  public slipVector = { x: 0, y: 1 };
 
   // Estado de transporte de ítems (T-08)
   public carriedItem: Item | null = null;
@@ -104,6 +109,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       this.carriedIcon.setTexture(tex);
     }
     this.carriedIcon.setVisible(true);
+    getSound(this.scene)?.playPickup();
     return true;
   }
 
@@ -116,11 +122,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.carriedItem = null;
     this.speedMultiplier = 1.0;
     this.carriedIcon.setVisible(false);
+    getSound(this.scene)?.playDrop();
     return item;
   }
 
   public hasItem(): boolean {
     return this.carriedItem !== null;
+  }
+
+  /**
+   * Provoca un resbalón: pierde control 0.6 s deslizándose y suelta el ítem transportado.
+   * Si está haciendo dash, es inmune.
+   */
+  public slip(durationSec = 0.6): boolean {
+    if (this.dashTimer > 0 || this.slipTimer > 0) return false;
+    this.slipTimer = durationSec;
+    this.slipVector = { x: this.facing.x, y: this.facing.y };
+    this.drop();
+    getSound(this.scene)?.playSlip();
+    return true;
   }
 
   /**
@@ -131,6 +151,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (!body) return;
 
     const deltaSec = delta / 1000;
+
+    // Actualizar temporizadores de Resbalón (T-28)
+    if (this.slipTimer > 0) {
+      this.slipTimer = Math.max(0, this.slipTimer - deltaSec);
+      const slipSpeed = PLAYER_SPEED * 1.3;
+      body.setVelocity(this.slipVector.x * slipSpeed, this.slipVector.y * slipSpeed);
+      this.label.setPosition(this.x, this.y - 28);
+      this.pointerIndicator.setPosition(this.x + this.facing.x * 20, this.y + this.facing.y * 20);
+      return;
+    }
 
     // Actualizar temporizadores de Dash
     if (this.dashCooldown > 0) {
@@ -167,6 +197,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       } else {
         this.dashVector = { x: this.facing.x, y: this.facing.y };
       }
+
+      getSound(this.scene)?.playDash();
 
       // Efecto visual flash de dash
       this.setAlpha(0.6);

@@ -48,6 +48,18 @@ export const AUTOCLAVE_PROCESS_TIME_SEC = 8.0;
 export const AUTOCLAVE_CONTAMINATION_TIME_SEC = 20.0;
 export const SURGERY_DURATION_SEC = 6.0;
 
+/** Parámetros de Emergencias (MEC-05 / T-27 / T-28 / T-29 / T-30). */
+export const SLIP_DURATION_SEC = 0.6;
+export const SPILL_CLEAN_TIME_SEC = 2.0;
+export const BLACKOUT_MAX_DURATION_SEC = 25.0;
+export const BLACKOUT_VISION_RADIUS_PX = 160;
+export const PANEL_FIX_TIME_SEC = 3.0;
+export const CODE_BLUE_TIMEOUT_SEC = 25.0;
+export const DEFIB_CHARGE_TIME_SEC = 3.0;
+export const CODE_BLUE_TREAT_TIME_SEC = 2.0;
+export const CODE_BLUE_SUCCESS_POINTS = 200;
+export const CODE_BLUE_FAIL_PENALTY = 150;
+
 /** Zona muerta para sticks analógicos. */
 export const GAMEPAD_DEADZONE = 0.25;
 
@@ -83,4 +95,5 @@ export const SCENE_KEYS = {
 export const REGISTRY_KEYS = {
   roster: 'roster',
   input: 'input',
+  sound: 'sound',
 } as const;

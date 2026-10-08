@@ -49,7 +49,7 @@ npm run build      # Compilación para producción
 8. **Limpieza de Camas Sucias (`M` $\rightarrow$ `B`):**
    - Las camas sucias bloquean nuevas asignaciones de triaje.
    - Toma **Sábanas Limpias** en el armario de limpieza `M` (conmuta entre sábana y mopa con <kbd>Usar</kbd> y recoge con <kbd>Agarrar</kbd>).
-   - Frente a la cama sucia, mantén <kbd>Usar</kbd> durante 2.0 s para limpiarla y dejarla lista.
+   - Frente a la cama sucia, mantén <kbd>Usar</kbd> durante 2.0 s para limpiarla y dejarla disponible.
 9. **Mesa Quirúrgica y Cirugía (`Q`):**
    - Para pacientes con dolencia de **Cirugía** (Nivel 2), trasládalos en camilla junto a la mesa quirúrgica `Q`.
    - Suministra 1 **Instrumental Limpio** y 1 **Anestesia** (`N`) en la mesa `Q`.
@@ -60,7 +60,11 @@ npm run build      # Compilación para producción
     - Lávalo en el lavabo `L` manteniendo <kbd>Usar</kbd> 3 s $\rightarrow$ **Instrumental Mojado**.
     - Colócalo en el **Autoclave (`A`)** con <kbd>Agarrar</kbd>; se esteriliza automáticamente durante 8 segundos $\rightarrow$ **Instrumental Limpio**.
     - ¡Cuidado! Si el instrumental limpio permanece más de 20 segundos sin recogerse en el autoclave, se contamina y vuelve a estar sucio.
-11. **Puntuación y Estrellas:** Obtén 1, 2 o 3 estrellas superando los umbrales de puntuación del nivel antes de que se agote el tiempo. Si la paciencia de un paciente llega a 0, se pierde y penaliza con −50 puntos.
+11. **Eventos de Emergencia y Caos (MEC-05):**
+    - **Derrame (`spill`):** Aparece un charco en el suelo; si lo pisas sin hacer dash resbalas durante 0.6 s y sueltas tu ítem. Limpieza: toma la **Mopa** en `M` y mantén <kbd>Usar</kbd> 2.0 s sobre el charco.
+    - **Apagón (`blackout`):** Las estaciones de proceso se desactivan y la pantalla se oscurece. Mantén <kbd>Usar</kbd> 3.0 s en el **Cuadro Eléctrico (`U`)** para restablecer la corriente.
+    - **Código Azul (`codeBlue`):** Un paciente en cama sufre un paro con una cuenta atrás de 25 segundos. Carga el **Desfibrilador (`F`)** (<kbd>Usar</kbd> 3 s), llévalo a la cama (ítem pesado: −30% velocidad) y atiende coordinadamente con 2 jugadores (<kbd>Usar</kbd> 2 s). Éxito: +200 pts; Fallo: −150 pts y paciente perdido.
+12. **Puntuación y Estrellas:** Obtén 1, 2 o 3 estrellas superando los umbrales de puntuación del nivel antes de que se agote el tiempo. Si la paciencia de un paciente llega a 0, se pierde y penaliza con −50 puntos.
 
 ---
 
@@ -105,6 +109,17 @@ npm run build      # Compilación para producción
 - Mesa Quirúrgica `SurgeryTable` (`Q`) con intervención coordinada de 6.0 s (2 cirujanos en multijugador), consumo de suministros y generación de instrumental sucio.
 - Ciclo cerrado de instrumental quirúrgico (`Q` $\rightarrow$ `L` $\rightarrow$ `A` $\rightarrow$ `Q`).
 
+### ✅ Fase 5 — Emergencias y Caos (MEC-05)
+- Planificador `EventDirector` que dispara eventos programados según la configuración de cada nivel.
+- Charcos de derrame (`Spill`) con resbalón forzado de 0.6 s, inmunidad táctica durante el Dash y limpieza con mopa.
+- Cuadro Eléctrico `ElectricPanel` (`U`) con desactivación de estaciones y máscara de visión oscura durante apagones.
+### ✅ Fase 6 — Pulido y Robustez
+- **Detección de Mandos Desconectados:** Pausa automática con banner de aviso indicando qué mando se ha desconectado e imposibilidad de reanudar hasta reconectarlo.
+- **Escalado por Jugadores:** Adaptación de capacidad máxima de pacientes, intervalos de pedido y requisitos de personal según el tamaño del equipo (1P, 2P, 3–4P).
+- **Audio Procedural (WebAudio):** Efectos de sonido sintetizados en tiempo real sin latencia (recogida, entrega, procesos completados, alta, paciente perdido, alarmas, dash, resbalones, desfibrilador y menús).
+- **Onboarding Guiado en Nivel 1:** Primeros 2 pacientes fijos (`herida` y `fiebre`), bloqueo de casos complejos al inicio y banner de instrucciones contextuales dinámicas.
+- **Matriz de Calidad QA:** 24 suites de tests unitarios, 85/85 tests pasando y validación integral documentada en `docs/QA.md`.
+
 ---
 
 ## 📂 Estructura y Documentación
@@ -114,6 +129,7 @@ npm run build      # Compilación para producción
 | [docs/MECANICAS.md](docs/MECANICAS.md) | Especificación detallada de las 5 mecánicas del juego |
 | [docs/NIVELES.md](docs/NIVELES.md) | Layouts ASCII, parámetros y escalado de dificultad por nivel |
 | [docs/MULTIJUGADOR.md](docs/MULTIJUGADOR.md) | Mapeo de controles por teclado y mandos Gamepad API |
+| [docs/QA.md](docs/QA.md) | Matriz de pruebas y verificación de control de calidad |
 | [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md) | Arquitectura modular del proyecto y convenciones de código |
 | [docs/TAREAS.md](docs/TAREAS.md) | Lista de tareas y progreso de las fases de desarrollo |
 | [docs/DECISIONES.md](docs/DECISIONES.md) | Registro cronológico de decisiones arquitectónicas y técnicas |

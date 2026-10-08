@@ -47,6 +47,11 @@ export class ScoreTracker {
     return -PATIENT_LOST_PENALTY;
   }
 
+  public addPoints(delta: number): number {
+    this.score = Math.max(0, this.score + delta);
+    return this.score;
+  }
+
   public getStars(thresholds: readonly [number, number, number]): number {
     return calculateStars(this.score, thresholds);
   }

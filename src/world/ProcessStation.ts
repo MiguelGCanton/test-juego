@@ -24,8 +24,9 @@ export class ProcessStation extends Counter implements Interactable {
   public readonly config: ProcessConfig;
   public timer: ProgressTimer;
   public isProcessing = false;
+  public onComplete?: () => void;
 
-  constructor(cell: GridPos, char: string, customConfig?: ProcessConfig) {
+  constructor(cell: GridPos, char: string, customConfig?: ProcessConfig, onComplete?: () => void) {
     super(cell, char);
     this.config = customConfig ?? PROCESS_STATION_CONFIGS[char] ?? {
       input: 'gasas',
@@ -33,6 +34,7 @@ export class ProcessStation extends Counter implements Interactable {
       durationSec: 3,
     };
     this.timer = new ProgressTimer(this.config.durationSec);
+    this.onComplete = onComplete;
   }
 
   public override placeItem(item: Item): boolean {
@@ -65,6 +67,7 @@ export class ProcessStation extends Counter implements Interactable {
       // Transformar el ítem al output
       this.storedItem = new Item(this.config.output);
       this.isProcessing = false;
+      this.onComplete?.();
     }
   }
 

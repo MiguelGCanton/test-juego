@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, SCENE_KEYS, UI_COLORS } from '../config/constants';
-import { getInput } from '../core/services';
+import { getInput, getSound } from '../core/services';
 import { addText, addTitle } from '../core/ui';
 
 export interface ResultsData {
@@ -104,6 +104,7 @@ export class ResultsScene extends Phaser.Scene {
 
     if (dy) {
       this.selected = Phaser.Math.Wrap(this.selected + dy, 0, this.options.length);
+      getSound(this)?.playMenuMove();
     }
 
     this.optionLabels.forEach((label, i) => {
@@ -111,6 +112,7 @@ export class ResultsScene extends Phaser.Scene {
     });
 
     if (confirm) {
+      getSound(this)?.playMenuSelect();
       if (this.selected === 0) {
         this.scene.start(SCENE_KEYS.Game, { levelId: this.dataPayload.levelId });
       } else if (this.selected === 1) {

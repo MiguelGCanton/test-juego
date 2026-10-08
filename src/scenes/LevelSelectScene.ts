@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, SCENE_KEYS, UI_COLORS } from '../config/constants';
-import { getInput } from '../core/services';
+import { getInput, getSound } from '../core/services';
 import { addText, addTitle } from '../core/ui';
 import { LEVELS } from '../levels/types';
 
@@ -32,9 +32,15 @@ export class LevelSelectScene extends Phaser.Scene {
       this.prevY.set(d.id, f.moveY);
       if (f.grabPressed) confirm = true;
     }
-    if (dy) this.selected = Phaser.Math.Wrap(this.selected + dy, 0, LEVELS.length);
+    if (dy) {
+      this.selected = Phaser.Math.Wrap(this.selected + dy, 0, LEVELS.length);
+      getSound(this)?.playMenuMove();
+    }
     this.labels.forEach((t, i) => t.setColor(i === this.selected ? UI_COLORS.textAccent : UI_COLORS.text));
-    if (confirm) this.scene.start(SCENE_KEYS.Game, { levelId: LEVELS[this.selected]!.id });
+    if (confirm) {
+      getSound(this)?.playMenuSelect();
+      this.scene.start(SCENE_KEYS.Game, { levelId: LEVELS[this.selected]!.id });
+    }
   }
 
   private readonly prevY = new Map<string, number>();

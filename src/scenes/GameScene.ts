@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import {
   GAME_HEIGHT, GAME_WIDTH, SCENE_KEYS, TILE_SIZE, UI_COLORS,
 } from '../config/constants';
-import { getInput, getRoster } from '../core/services';
+import { getInput, getRoster, getSound } from '../core/services';
 import { cellToWorld, parseLayout, type ParsedLevel } from '../levels/LevelLoader';
 import { LEVEL_1 } from '../levels/nivel1';
 import { getLevelById } from '../levels/types';
@@ -17,6 +17,11 @@ import { Stretcher } from '../world/Stretcher';
 import { XRayStation } from '../world/XRayStation';
 import { Autoclave } from '../world/Autoclave';
 import { SurgeryTable } from '../world/SurgeryTable';
+import { ElectricPanel } from '../world/ElectricPanel';
+import { DefibrillatorStation } from '../world/DefibrillatorStation';
+import { Spill } from '../world/Spill';
+import { EventDirector, type EventType } from '../events/EventDirector';
+import { CodeBlueManager } from '../events/CodeBlueManager';
 import { PatientSpawner } from '../patients/PatientSpawner';
 import { PatientView } from '../patients/PatientView';
 import { ScoreTracker } from '../core/Scoring';
@@ -24,7 +29,7 @@ import { addText } from '../core/ui';
 
 /**
  * ESCENA DE JUEGO.
- * Orquesta la física, el mapa, los jugadores, estaciones interactivas, camilla, rayos X, autoclave, cirugía, triaje, pacientes, pausa y HUD.
+ * Orquesta la física, el mapa, los jugadores, estaciones interactivas, camilla, rayos X, autoclave, cirugía, emergencias, triaje, pacientes, pausa y HUD.
  */
 export class GameScene extends Phaser.Scene {
   private levelId = '';
@@ -37,7 +42,14 @@ export class GameScene extends Phaser.Scene {
   public xRayStations: XRayStation[] = [];
   public autoclaves: Autoclave[] = [];
   public surgeryTables: SurgeryTable[] = [];
+  public electricPanels: ElectricPanel[] = [];
+  public defibrillators: DefibrillatorStation[] = [];
   public stretcher!: Stretcher;
+
+  public eventDirector!: EventDirector;
+  public spills = new Map<string, { spill: Spill; sprite: Phaser.GameObjects.Image }>();
+  public codeBlueManager = new CodeBlueManager();
+  private blackoutGraphics!: Phaser.GameObjects.Graphics;
 
   public spawner!: PatientSpawner;
   public patientViews = new Map<string, PatientView>();
@@ -52,6 +64,10 @@ export class GameScene extends Phaser.Scene {
   private pauseOptionLabels: Phaser.GameObjects.Text[] = [];
   private pauseSelectedIndex = 0;
   private prevPauseY = new Map<string, number>();
+  private disconnectBannerText!: Phaser.GameObjects.Text;
+  private tutorialContainer!: Phaser.GameObjects.Container;
+  private tutorialText!: Phaser.GameObjects.Text;
+  private unsubDisconnect?: () => void;
 
   constructor() {
     super(SCENE_KEYS.Game);
@@ -75,7 +91,8 @@ export class GameScene extends Phaser.Scene {
     const levelData = getLevelById(this.levelId) ?? LEVEL_1;
     this.parsedLevel = parseLayout(levelData);
     this.remainingSec = levelData.durationSec;
-    this.spawner = new PatientSpawner(levelData);
+    const rosterCount = Math.max(1, getRoster(this).players.length);
+    this.spawner = new PatientSpawner(levelData, rosterCount);
 
     // 1. Grupo de obstáculos estáticos (física Arcade)
     this.obstacles = this.physics.add.staticGroup();
@@ -121,7 +138,9 @@ export class GameScene extends Phaser.Scene {
         const counter = new Counter({ col: st.col, row: st.row }, 'C');
         this.interactables.set(key, counter);
       } else if (st.char === 'K' || st.char === 'J' || st.char === 'L') {
-        const proc = new ProcessStation({ col: st.col, row: st.row }, st.char);
+        const proc = new ProcessStation({ col: st.col, row: st.row }, st.char, undefined, () => {
+          getSound(this)?.playProcessComplete();
+        });
         this.interactables.set(key, proc);
       } else if (st.char === 'B') {
         const bed = new Bed({ col: st.col, row: st.row }, (patient, b) => {
@@ -134,6 +153,7 @@ export class GameScene extends Phaser.Scene {
           { col: st.col, row: st.row },
           () => this.stretcher,
           (patient) => {
+            getSound(this)?.playProcessComplete();
             this.events.emit('hud:message', {
               text: `¡Rayos X completado para ${patient.ailment.name}!`,
               color: '#3498db',
@@ -146,12 +166,14 @@ export class GameScene extends Phaser.Scene {
         const auto = new Autoclave(
           { col: st.col, row: st.row },
           () => {
+            getSound(this)?.playProcessComplete();
             this.events.emit('hud:message', {
               text: '¡Autoclave: instrumental esterilizado!',
               color: '#58d68d',
             });
           },
           () => {
+            getSound(this)?.playPatientLost();
             this.events.emit('hud:message', {
               text: '¡Atención! Instrumental contaminado en autoclave',
               color: '#e74c3c',
@@ -173,12 +195,35 @@ export class GameScene extends Phaser.Scene {
         );
         this.surgeryTables.push(surgery);
         this.interactables.set(key, surgery);
+      } else if (st.char === 'U') {
+        const panel = new ElectricPanel({ col: st.col, row: st.row }, () => {
+          this.eventDirector.endEvent('blackout', true);
+          this.blackoutGraphics.setVisible(false);
+          getSound(this)?.playProcessComplete();
+          this.events.emit('hud:message', {
+            text: '¡Energía restablecida en el hospital!',
+            color: '#2ecc71',
+          });
+        });
+        this.electricPanels.push(panel);
+        this.interactables.set(key, panel);
+      } else if (st.char === 'F') {
+        const defib = new DefibrillatorStation({ col: st.col, row: st.row }, () => {
+          getSound(this)?.playDefibShock();
+          this.events.emit('hud:message', {
+            text: '¡Desfibrilador cargado! Llévalo a la cama',
+            color: '#e74c3c',
+          });
+        });
+        this.defibrillators.push(defib);
+        this.interactables.set(key, defib);
       } else if (st.char === 'R') {
         const desk = new TriageDesk(
           { col: st.col, row: st.row },
           () => this.spawner.activePatients,
           () => this.beds,
           (res) => {
+            getSound(this)?.playTriage();
             this.events.emit('hud:message', {
               text: `Paciente asignado a cama (${res.bed.cell.col}, ${res.bed.cell.row})`,
               color: '#2ec4b6',
@@ -242,18 +287,167 @@ export class GameScene extends Phaser.Scene {
       );
     });
 
-    // 9. Crear overlay de pausa (T-20)
+    // 9. Crear capa visual para Apagón (T-29)
+    this.blackoutGraphics = this.add.graphics().setDepth(25).setVisible(false);
+
+    // 10. Gestor de emergencias Código Azul (T-30)
+    this.codeBlueManager = new CodeBlueManager((success, pointsDelta) => {
+      this.eventDirector.endEvent('codeBlue', success);
+      this.scoreTracker.addPoints(pointsDelta);
+      const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+      this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
+
+      if (success) {
+        this.events.emit('hud:message', {
+          text: `¡Código Azul resuelto! +${pointsDelta} pts`,
+          color: '#2ecc71',
+        });
+      } else {
+        this.events.emit('hud:message', {
+          text: `¡Código Azul fallido! ${pointsDelta} pts y paciente perdido`,
+          color: '#e74c3c',
+        });
+      }
+    });
+
+    // 11. Planificador de Eventos de Emergencia (T-27 / MEC-05)
+    this.eventDirector = new EventDirector(
+      levelData.events,
+      (type: EventType) => {
+        getSound(this)?.playEmergencyAlarm();
+        this.handleEventStart(type);
+      }
+    );
+
+    // 12. Crear overlay de pausa y desconexión (T-20, T-31)
     this.createPauseOverlay();
 
-    // 9. Pausar al perder foco de ventana
+    // Listener de desconexión de mandos (T-31)
+    const input = getInput(this);
+    this.unsubDisconnect = input.onDisconnect((deviceId, label) => {
+      const isPlayerDevice = getRoster(this).has(deviceId);
+      if (isPlayerDevice && !this.isLevelFinished) {
+        this.togglePause(true);
+        this.disconnectBannerText
+          .setText(`⚠️ ¡${label.toUpperCase()} DESCONECTADO!\nPor favor, reconéctalo para continuar.`)
+          .setVisible(true);
+      }
+    });
+
+    // 13. Pausar al perder foco de ventana
     this.game.events.on('blur', () => {
       if (!this.isPaused && !this.isLevelFinished) {
         this.togglePause(true);
       }
     });
 
-    // 10. Iniciar escena paralela de HUD
+    // 14. Crear banner de Onboarding Tutorial si es Nivel 1 (T-34)
+    if (this.levelId === 'nivel-1') {
+      this.createTutorialOverlay();
+    }
+
+    // 15. Iniciar escena paralela de HUD
     this.scene.launch(SCENE_KEYS.Hud, { levelData });
+  }
+
+  private createTutorialOverlay(): void {
+    this.tutorialContainer = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT - 32).setDepth(20);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x16243a, 0.9);
+    bg.fillRoundedRect(-500, -22, 1000, 44, 8);
+    bg.lineStyle(2, 0x2ec4b6, 0.8);
+    bg.strokeRoundedRect(-500, -22, 1000, 44, 8);
+    this.tutorialContainer.add(bg);
+
+    this.tutorialText = this.add.text(0, 0, '① ¡Llegó un paciente! Ve a Triaje [R] y mantén USAR para asignarle cama.', {
+      fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
+      fontSize: '16px',
+      color: '#e8f1ff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.tutorialContainer.add(this.tutorialText);
+  }
+
+  private updateTutorial(): void {
+    if (!this.tutorialContainer || !this.tutorialText) return;
+
+    // Determinar paso de tutorial
+    const active = this.spawner.activePatients;
+    const hasDirtyBed = this.beds.some((b) => !b.isClean);
+    const waitingTriage = active.some((p) => p.state === 'Esperando');
+    const patientInBed = active.find((p) => p.state === 'EnTratamiento' || p.state === 'Triado');
+
+    if (waitingTriage) {
+      this.tutorialText.setText('① ¡Llegó un paciente! Ve a Triaje [R] y mantén USAR (X / Espacio) para asignarle cama.');
+    } else if (patientInBed && patientInBed.ailment.id === 'herida') {
+      this.tutorialText.setText('② HERIDA: Toma Gasas [G] (Z/J), procésalas en [K] para obtener Venda, y aplícala en su Cama [B].');
+    } else if (hasDirtyBed) {
+      this.tutorialText.setText('③ ¡CAMA SUCIA! Ve al Armario [M] por Sábanas y mantén USAR en la cama para limpiarla.');
+    } else if (patientInBed && patientInBed.ailment.id === 'fiebre') {
+      this.tutorialText.setText('④ FIEBRE: Toma un Vial en [P], prepáralo en [J] para obtener Jeringa y aplícala en su Cama.');
+    } else if (patientInBed && patientInBed.ailment.id === 'fractura') {
+      this.tutorialText.setText('⑤ FRACTURA: ¡Usa la Camilla [T] (Agarrar Z) para llevar al paciente a Rayos X [X]!');
+    } else {
+      this.tutorialText.setText('★ ¡Onboarding completado! Cura pacientes antes de que se agote su paciencia.');
+    }
+  }
+
+  private handleEventStart(type: EventType): void {
+    if (type === 'spill') {
+      this.spawnRandomSpill();
+    } else if (type === 'blackout') {
+      this.electricPanels.forEach((p) => p.triggerBlackout());
+      this.blackoutGraphics.setVisible(true);
+      this.events.emit('hud:message', {
+        text: '¡APAGÓN! Máquinas apagadas. Repara el cuadro (U)',
+        color: '#f39c12',
+      });
+    } else if (type === 'codeBlue') {
+      const occupiedBed = this.beds.find((b) => b.isOccupied);
+      if (occupiedBed) {
+        this.codeBlueManager.start(occupiedBed);
+        this.events.emit('hud:message', {
+          text: '¡CÓDIGO AZUL! Paciente en paro. ¡Trae el desfibrilador (F)!',
+          color: '#e74c3c',
+        });
+      } else {
+        this.eventDirector.endEvent('codeBlue', false);
+      }
+    }
+  }
+
+  private spawnRandomSpill(): void {
+    // Buscar celdas de suelo libres sin estaciones ni charcos
+    const availableFloors = this.parsedLevel.floors.filter((f) => {
+      const key = getCellKey(f.col, f.row);
+      return !this.spills.has(key) && !this.interactables.has(key);
+    });
+
+    if (availableFloors.length === 0) return;
+
+    const floor = availableFloors[Math.floor(Math.random() * availableFloors.length)]!;
+    const key = getCellKey(floor.col, floor.row);
+    const { x, y } = cellToWorld(floor.col, floor.row);
+
+    const sprite = this.add.image(x, y, 'spill-puddle').setDepth(0.8);
+    const spill = new Spill(floor, () => {
+      sprite.destroy();
+      this.spills.delete(key);
+      this.interactables.delete(key);
+      this.eventDirector.endEvent('spill', true);
+      this.events.emit('hud:message', {
+        text: '¡Derrame limpiado con mopa!',
+        color: '#2ecc71',
+      });
+    });
+
+    this.spills.set(key, { spill, sprite });
+    this.interactables.set(key, spill);
+
+    this.events.emit('hud:message', {
+      text: '¡Derrame en el suelo! Cuidado con resbalar, usa la mopa (M)',
+      color: '#3498db',
+    });
   }
 
   private createPauseOverlay(): void {
@@ -266,13 +460,23 @@ export class GameScene extends Phaser.Scene {
     this.pauseContainer.add(bg);
 
     // Título
-    const title = this.add.text(GAME_WIDTH / 2, 200, 'PAUSA', {
+    const title = this.add.text(GAME_WIDTH / 2, 170, 'PAUSA', {
       fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
       fontSize: '56px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
     this.pauseContainer.add(title);
+
+    // Banner de desconexión (T-31)
+    this.disconnectBannerText = this.add.text(GAME_WIDTH / 2, 250, '', {
+      fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
+      fontSize: '22px',
+      color: '#ff5a5f',
+      fontStyle: 'bold',
+      align: 'center',
+    }).setOrigin(0.5).setVisible(false);
+    this.pauseContainer.add(this.disconnectBannerText);
 
     // Opciones
     this.pauseOptionLabels = [];
@@ -287,6 +491,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   public togglePause(forceState?: boolean): void {
+    const input = getInput(this);
+    const hasDisconnectedDevice = getRoster(this).players.some((p) => !input.isDeviceConnected(p.deviceId));
+
+    // Si hay un mando desconectado y se intenta reanudar, mantener la pausa con el aviso
+    if (forceState === false && hasDisconnectedDevice) {
+      this.disconnectBannerText
+        .setText('⚠️ MANDO DESCONECTADO\nPor favor, reconecta el mando para reanudar.')
+        .setVisible(true);
+      return;
+    }
+
     this.isPaused = forceState ?? !this.isPaused;
 
     if (this.isPaused) {
@@ -294,9 +509,13 @@ export class GameScene extends Phaser.Scene {
       this.pauseContainer.setVisible(true);
       this.pauseSelectedIndex = 0;
       this.updatePauseLabels();
+      if (!hasDisconnectedDevice) {
+        this.disconnectBannerText.setVisible(false);
+      }
     } else {
       this.physics.resume();
       this.pauseContainer.setVisible(false);
+      this.disconnectBannerText.setVisible(false);
     }
   }
 
@@ -314,6 +533,7 @@ export class GameScene extends Phaser.Scene {
     const points = this.scoreTracker.addDischarge(patient);
     const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
 
+    getSound(this)?.playDischarge();
     this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
     this.events.emit('hud:message', { text: `¡Alta exitosa! +${points} pts`, color: '#2ecc71' });
 
@@ -341,6 +561,63 @@ export class GameScene extends Phaser.Scene {
     // Actualizar autoclaves (MEC-04 / T-25)
     this.autoclaves.forEach((a) => a.update(deltaSec));
 
+    // Actualizar emergencias (MEC-05 / T-27 / T-29 / T-30)
+    this.eventDirector.update(deltaSec);
+    this.electricPanels.forEach((p) => p.update(deltaSec));
+    this.codeBlueManager.update(deltaSec, getRoster(this).players.length);
+
+    // Actualizar Onboarding Tutorial en Nivel 1 (T-34)
+    this.updateTutorial();
+
+    // Comprobar si algún jugador resbala en un charco de derrame (T-28)
+    for (const player of this.players.values()) {
+      for (const { spill } of this.spills.values()) {
+        const spillPos = cellToWorld(spill.cell.col, spill.cell.row);
+        if (Math.hypot(player.x - spillPos.x, player.y - spillPos.y) < 28) {
+          spill.checkPlayerSlip(player);
+        }
+      }
+    }
+
+    // Comprobar asistencia en Código Azul junto a la cama (T-30)
+    if (this.codeBlueManager.isCodeBlueActive && this.codeBlueManager.targetBed) {
+      const targetBed = this.codeBlueManager.targetBed;
+      const targetPos = cellToWorld(targetBed.cell.col, targetBed.cell.row);
+      let hasDefib = false;
+
+      for (const player of this.players.values()) {
+        const dist = Math.hypot(player.x - targetPos.x, player.y - targetPos.y);
+        if (dist < 80 && player.carriedItem?.type === 'desfibrilador') {
+          hasDefib = true;
+        }
+      }
+      this.codeBlueManager.setDefibrillatorPresent(hasDefib);
+
+      for (const slot of getRoster(this).players) {
+        const frame = input.read(slot.deviceId);
+        const player = this.players.get(slot.deviceId);
+        if (player) {
+          const dist = Math.hypot(player.x - targetPos.x, player.y - targetPos.y);
+          if (dist < 80 && frame.use) {
+            this.codeBlueManager.addParticipant(slot.deviceId);
+          } else {
+            this.codeBlueManager.removeParticipant(slot.deviceId);
+          }
+        }
+      }
+    }
+
+    // Renderizar oscuridad de apagón si está activo (T-29)
+    const isBlackout = this.electricPanels.some((p) => p.isBlackoutActive);
+    if (isBlackout) {
+      this.blackoutGraphics.setVisible(true);
+      this.blackoutGraphics.clear();
+      this.blackoutGraphics.fillStyle(0x050a14, 0.94);
+      this.blackoutGraphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    } else {
+      this.blackoutGraphics.setVisible(false);
+    }
+
     // Gestión del menú de pausa cuando el juego está pausado
     if (this.isPaused) {
       let dy = 0;
@@ -362,6 +639,7 @@ export class GameScene extends Phaser.Scene {
       if (dy) {
         this.pauseSelectedIndex = Phaser.Math.Wrap(this.pauseSelectedIndex + dy, 0, this.pauseOptions.length);
         this.updatePauseLabels();
+        getSound(this)?.playMenuMove();
       }
 
       if (toggle) {
@@ -370,12 +648,15 @@ export class GameScene extends Phaser.Scene {
       }
 
       if (confirm) {
+        getSound(this)?.playMenuSelect();
         if (this.pauseSelectedIndex === 0) {
           this.togglePause(false);
         } else if (this.pauseSelectedIndex === 1) {
+          this.unsubDisconnect?.();
           this.scene.stop(SCENE_KEYS.Hud);
           this.scene.restart({ levelId: this.levelId });
         } else {
+          this.unsubDisconnect?.();
           this.scene.stop(SCENE_KEYS.Hud);
           this.scene.start(SCENE_KEYS.Menu);
         }
@@ -411,6 +692,7 @@ export class GameScene extends Phaser.Scene {
       if (patient.state === 'Perdido') {
         this.scoreTracker.addPatientLost();
         const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+        getSound(this)?.playPatientLost();
         this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
         this.events.emit('hud:message', { text: '¡Paciente perdido! -50 pts', color: '#e74c3c' });
 

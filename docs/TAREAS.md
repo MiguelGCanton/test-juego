@@ -50,17 +50,17 @@ Leyenda: **S** < 1 h · **M** 1–2 h. Estado: `[ ]` libre · `[~]` en curso · 
 - [x] **T-26 · Mesa quirúrgica `Q` y cirugía** (M) — [2026-10-07 · Antigravity] Requiere `instrumental_limpio` + `anestesia` + paciente en camilla; operar 6 s con **2 jugadores** a la vez (1 jugador: ver NIVELES §Escalado). Produce `instrumental_sucio`. Dep: T-25, T-22
 
 ## Fase 5 — MEC-05 Emergencias
-- [ ] **T-27 · EventDirector** (M) — Planificador de `LevelData.events` (lógica pura + tests con reloj simulado: `firstAtSec`, intervalos, un evento activo por tipo). Emite eventos `event:start/end`. Dep: T-03
-- [ ] **T-28 · Derrame, resbalón y mopa** (M) — Charco en celda libre; resbalar 0.6 s (inmune con dash); `mopa` + `use` 2 s limpia. Dep: T-27, T-06, T-09
-- [ ] **T-29 · Apagón y cuadro eléctrico `U`** (M) — Desactiva `ProcessStation`; oscurecer con máscara de visión 160 px por jugador; `use` 3 s en `U` lo resuelve (auto en 25 s). Dep: T-27, T-11
-- [ ] **T-30 · Código Azul y desfibrilador `F`** (M) — Cuenta atrás 25 s; cargar `F` (3 s), ítem pesado −30 % velocidad; 2 jugadores `use` 2 s en cama; éxito/fallo con puntos. Dep: T-27, T-16, T-17
+- [x] **T-27 · EventDirector** (M) — [2026-10-07 · Antigravity] Planificador de `LevelData.events` (lógica pura + tests con reloj simulado: `firstAtSec`, intervalos, un evento activo por tipo). Emite eventos `event:start/end`. Dep: T-03
+- [x] **T-28 · Derrame, resbalón y mopa** (M) — [2026-10-07 · Antigravity] Charco en celda libre; resbalar 0.6 s (inmune con dash); `mopa` + `use` 2 s limpia. Dep: T-27, T-06, T-09
+- [x] **T-29 · Apagón y cuadro eléctrico `U`** (M) — [2026-10-07 · Antigravity] Desactiva `ProcessStation`; oscurecer con máscara de visión 160 px por jugador; `use` 3 s en `U` lo resuelve (auto en 25 s). Dep: T-27, T-11
+- [x] **T-30 · Código Azul y desfibrilador `F`** (M) — [2026-10-07 · Antigravity] Cuenta atrás 25 s; cargar `F` (3 s), ítem pesado −30 % velocidad; 2 jugadores `use` 2 s en cama; éxito/fallo con puntos. Dep: T-27, T-16, T-17
 
 ## Fase 6 — Pulido y robustez
-- [ ] **T-31 · Mando desconectado** (S) — Si el dispositivo de un jugador se desconecta: pausar y mostrar "Reconecta el mando de P#". Dep: T-20
-- [ ] **T-32 · Escalado por jugadores** (S) — Aplicar tabla de NIVELES.md §Escalado por jugadores. Dep: T-13, T-21, T-30
-- [ ] **T-33 · Audio placeholder** (S) — SFX sintetizados (WebAudio vía `Phaser.Sound`) para: tomar/soltar, procesar completo, alta, paciente perdido, alarma de evento. Dep: T-16
-- [ ] **T-34 · Onboarding del nivel 1** (M) — Textos contextuales y primeros 2 pacientes fijos (NIVELES §Nivel 1). Dep: T-19
-- [ ] **T-35 · Balance y checklist QA** (M) — Jugar ambos niveles con 1, 2 y 4 jugadores; ajustar números en `config/`; completar `docs/QA.md` (matriz de pruebas) y registrar cambios en CHANGELOG. Dep: T-30, T-32
+- [x] **T-31 · Mando desconectado** (S) — [2026-10-07 · Antigravity] Si el dispositivo de un jugador se desconecta: pausar y mostrar "Reconecta el mando de P#". Dep: T-20
+- [x] **T-32 · Escalado por jugadores** (S) — [2026-10-07 · Antigravity] Aplicar tabla de NIVELES.md §Escalado por jugadores (1P, 2P, 3-4P). Dep: T-13, T-21, T-30
+- [x] **T-33 · Audio placeholder** (S) — [2026-10-07 · Antigravity] SFX sintetizados con WebAudio procedural (pickup, drop, proceso, alta, pérdida, alarma, dash, slip, desfibrilador, menú). Dep: T-16
+- [x] **T-34 · Onboarding del nivel 1** (M) — [2026-10-07 · Antigravity] Textos contextuales dinámicos y primeros 2 pacientes fijos (NIVELES §Nivel 1). Dep: T-19
+- [x] **T-35 · Balance y checklist QA** (M) — [2026-10-07 · Antigravity] Jugar ambos niveles con 1, 2 y 4 jugadores; matriz de pruebas `docs/QA.md` completada al 100% y cambios en CHANGELOG. Dep: T-30, T-32
 
 ## Camino crítico sugerido (para repartir en paralelo)
 - **Equipo A (mundo):** T-01 → T-04 → T-05 → T-06/T-07/T-08 → T-09/T-10 → T-11

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_WIDTH, MAX_PLAYERS, SCENE_KEYS, UI_COLORS } from '../config/constants';
-import { getInput, getRoster } from '../core/services';
+import { getInput, getRoster, getSound } from '../core/services';
 import { addText, addTitle } from '../core/ui';
 import { CONTROL_HINTS } from '../input/keyBindings';
 
@@ -43,8 +43,16 @@ export class LobbyScene extends Phaser.Scene {
     let startRequested = false;
     for (const d of input.getDevices()) {
       const f = input.read(d.id);
-      if (f.grabPressed) roster.join(d.id);
-      if (f.usePressed) roster.leave(d.id);
+      if (f.grabPressed) {
+        const joined = roster.join(d.id);
+        if (joined) getSound(this)?.playMenuSelect();
+      }
+      if (f.usePressed) {
+        if (roster.has(d.id)) {
+          roster.leave(d.id);
+          getSound(this)?.playMenuMove();
+        }
+      }
       if (f.dashPressed && roster.has(d.id)) startRequested = true;
     }
     this.cards.forEach((card, i) => {
@@ -56,6 +64,9 @@ export class LobbyScene extends Phaser.Scene {
       status.setText(dev ? `${dev.label}\n\n${CONTROL_HINTS[dev.kind === 'gamepad' ? 'gamepad' : dev.id]}` : 'Esperando…');
     });
     this.hint.setText(roster.players.length === 0 ? 'Se necesita al menos 1 jugador' : '');
-    if (startRequested) this.scene.start(SCENE_KEYS.LevelSelect);
+    if (startRequested && roster.players.length > 0) {
+      getSound(this)?.playMenuSelect();
+      this.scene.start(SCENE_KEYS.LevelSelect);
+    }
   }
 }

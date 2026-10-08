@@ -180,4 +180,15 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.generateTexture('stretcher-body', 112, 50);
     g.destroy();
   }
+
+  // 6. Textura para charco de derrame (48x32)
+  if (!scene.textures.exists('spill-puddle')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x3498db, 0.7);
+    g.fillEllipse(24, 16, 22, 13);
+    g.lineStyle(2, 0x85c1e9, 0.9);
+    g.strokeEllipse(24, 16, 22, 13);
+    g.generateTexture('spill-puddle', 48, 32);
+    g.destroy();
+  }
 }
