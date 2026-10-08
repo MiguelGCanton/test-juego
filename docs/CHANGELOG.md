@@ -2,6 +2,42 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-07 · Antigravity (T-20)
+- Implementada T-20: Menú de pausa interactivo en `GameScene` activable por botón de pausa o pérdida de foco (`blur`), con opciones de Reanudar, Reintentar y Salir al menú. Completada la **Fase 2 (MEC-01 Triaje y pacientes)**.
+
+## 2026-10-07 · Antigravity (T-19)
+- Implementada T-19: Escena de resultados `ResultsScene` (`src/scenes/ResultsScene.ts`) con resumen de puntuación, estrellas doradas, estadísticas de altas y pacientes perdidos, y opciones de reintento / menú con soporte multijugador. Registrada en `main.ts`.
+
+## 2026-10-07 · Antigravity (T-18)
+- Implementada T-18: `HudScene` (`src/scenes/HudScene.ts`) ejecutada en paralelo a `GameScene`, con temporizador regresivo de nivel, marcador de puntuación y estrellas, tickets de órdenes activas con barras de paciencia y notificaciones contextuales animadas.
+
+## 2026-10-07 · Antigravity (T-17)
+- Implementada T-17: Sistema de puntuación `Scoring` (`src/core/Scoring.ts`) con cálculo de puntos por alta con multiplicador de paciencia restante, penalización de -50 por paciente perdido y cálculo de estrellas por umbrales de nivel. Tests unitarios en `Scoring.test.ts`.
+
+## 2026-10-07 · Antigravity (T-16)
+- Implementada T-16: Sistema de tratamiento en cama `Bed` con verificación de ítem requerido (`venda` / `jeringa`), temporizador de curación de 1.5 s, consumo del ítem, paso de la cama a estado `sucia` y alta del paciente. Tests unitarios en `Bed.test.ts`.
+
+## 2026-10-07 · Antigravity (T-15)
+- Implementada T-15: Clase `Bed` (`src/world/Bed.ts`) y `TriageDesk` (`src/world/TriageDesk.ts`) para mostrador `R` con acción mantenida de 1.5 s, asignación de camas limpias libres y aviso de "Sin camas". Tests unitarios en `TriageDesk.test.ts`.
+
+## 2026-10-07 · Antigravity (T-14)
+- Implementada T-14: `PatientView` (`src/patients/PatientView.ts`) con renderizado de avatar según severidad (`patient-leve` / `patient-grave`), barra dinámica de paciencia en 3 colores, movimiento autónomo fluido a cama asignada para pacientes leves e icono de camilla para pacientes graves.
+
+## 2026-10-07 · Antigravity (T-13)
+- Implementada T-13: Recetas de tratamiento médico (`src/config/recipes.ts`) para las 4 dolencias y generador `PatientSpawner` (`src/patients/PatientSpawner.ts`) con selección aleatoria ponderada, intervalos de pedido y límite de pacientes simultáneos. Tests unitarios en `PatientSpawner.test.ts`.
+
+## 2026-10-07 · Antigravity (T-12)
+- Implementada T-12: Modelo de paciente `Patient` (`src/patients/Patient.ts`) con máquina de estados finitos (Esperando, Triado, EnCama, EnTratamiento, Alta, Perdido), control de severidad y temporizador de paciencia que se congela durante tratamiento. Tests unitarios en `Patient.test.ts`.
+
+## 2026-10-07 · Antigravity (T-11)
+- Implementada T-11: `ProgressTimer` puro (`src/core/ProgressTimer.ts`) y `ProcessStation` (`src/world/ProcessStation.ts`) con procesamiento progresivo por pulsación mantenida de Usar para `K` (vendas), `J` (jeringas) y `L` (lavado). Tests unitarios en `ProgressTimer.test.ts` y `ProcessStation.test.ts`. Completada la **Fase 1 (MEC-02)**.
+
+## 2026-10-07 · Antigravity (T-10)
+- Implementada T-10: Encimera `Counter` (`src/world/Counter.ts`) para almacenamiento y recogida de ítems individuales en celdas de tipo `C`. Tests unitarios en `Counter.test.ts`.
+
+## 2026-10-07 · Antigravity (T-09)
+- Implementada T-09: Estación `Dispenser` (`src/world/Dispenser.ts`) para suministros infinitos (`G`, `P`, `N` y armario `M` con conmutación interactiva sábanas/mopa). Tests unitarios en `Dispenser.test.ts`.
+
 ## 2026-10-07 · Antigravity (T-08)
 - Implementada T-08: Tipos de ítems (`src/items/ItemType.ts`), clase `Item` (`src/items/Item.ts`), soporte de transporte en `Player` (`pickUp`, `drop`, `hasItem`, reducción de velocidad con ítems pesados) e icono flotante sobre la cabeza. Tests unitarios en `Item.test.ts`. Completada la **Fase 0 (Fundación)**.
 

@@ -24,20 +24,20 @@ Leyenda: **S** < 1 h · **M** 1–2 h. Estado: `[ ]` libre · `[~]` en curso · 
 - [x] **T-08 · Ítems y carry** (M) — [2026-10-07 · Antigravity] `src/items/ItemType.ts` (tipos de MEC-02), clase `Item`, `Player.carry` (1 ítem) con icono sobre la cabeza. Sin estaciones aún. Dep: T-05, T-01
 
 ## Fase 1 — MEC-02 Ítems y estaciones
-- [ ] **T-09 · Dispenser** (S) — `G` gasas, `P` vial, `N` anestesia, `M` sábanas/mopa (con selector por `use`). `grab` entrega el ítem si las manos están vacías. Dep: T-07, T-08
-- [ ] **T-10 · Encimera `C`** (S) — Almacena 1 ítem (`grab` deja/toma). También sirve de base para dejar ítems en estaciones. Dep: T-07, T-08
-- [ ] **T-11 · ProcessStation** (M) — Clase genérica con config `{input, output, durationSec}`; hold-`use`, barra de progreso, pausa al soltar. Instanciar `K` (gasas→venda 3 s), `J` (vial→jeringa 2 s), `L` (sucio→mojado 3 s). Test unitario de la lógica de progreso (clase pura `ProgressTimer`). Dep: T-09, T-10
+- [x] **T-09 · Dispenser** (S) — [2026-10-07 · Antigravity] `G` gasas, `P` vial, `N` anestesia, `M` sábanas/mopa (con selector por `use`). `grab` entrega el ítem si las manos están vacías. Dep: T-07, T-08
+- [x] **T-10 · Encimera `C`** (S) — [2026-10-07 · Antigravity] Almacena 1 ítem (`grab` deja/toma). También sirve de base para dejar ítems en estaciones. Dep: T-07, T-08
+- [x] **T-11 · ProcessStation** (M) — [2026-10-07 · Antigravity] Clase genérica con config `{input, output, durationSec}`; hold-`use`, barra de progreso, pausa al soltar. Instanciar `K` (gasas→venda 3 s), `J` (vial→jeringa 2 s), `L` (sucio→mojado 3 s). Test unitario de la lógica de progreso (clase pura `ProgressTimer`). Dep: T-09, T-10
 
 ## Fase 2 — MEC-01 Triaje y pacientes
-- [ ] **T-12 · Modelo de paciente y FSM** (M) — `src/patients/Patient.ts` (lógica pura, sin Phaser): estados, paciencia, severidad. Tests: transiciones, congelado de paciencia en tratamiento, `Perdido` a 0. Dep: —
-- [ ] **T-13 · Recetas y spawner** (M) — `src/config/recipes.ts` (data de `herida|fiebre|fractura|cirugia` según MECANICAS) y `PatientSpawner` (lógica pura + test de pesos/intervalos/`maxPatients`). Dep: T-12, T-03
-- [ ] **T-14 · Sprite de paciente y movimiento a cama** (M) — Paciente visible con barra de paciencia; leves caminan a su cama asignada; graves esperan con icono de camilla. Dep: T-13, T-04
-- [ ] **T-15 · Mostrador de triaje `R`** (S) — `use` 1.5 s asigna cama limpia libre; mensaje "Sin camas". Dep: T-14, T-07
-- [ ] **T-16 · Cama, tratamiento y alta** (M) — `B` como `Interactable`: aplicar `venda`/`jeringa` (`use` 1.5 s) cuando el paciente lo requiera; alta → paciente va a `E` y desaparece; cama pasa a sucia (estado, sin limpieza aún). Dep: T-15, T-11
-- [ ] **T-17 · Puntuación** (S) — `src/core/Scoring.ts` puro (fórmula de MEC-01, penalizaciones, estrellas por umbral) + tests. Dep: T-12
-- [ ] **T-18 · HudScene** (M) — Escena paralela: temporizador, puntos, tickets de pedido (icono, cama, barra de paciencia, pasos). Se comunica por eventos de `GameScene`. Dep: T-16, T-17
-- [ ] **T-19 · Fin de nivel y ResultsScene** (S) — Al llegar el tiempo a 0: `ResultsScene` con puntos, estrellas, `grab` para reintentar/menú. Registrar en `SCENE_KEYS`/`main.ts`. Dep: T-18
-- [ ] **T-20 · Pausa** (S) — `pause` abre overlay (reanudar / menú). Pausa también al perder foco. Dep: T-05
+- [x] **T-12 · Modelo de paciente y FSM** (M) — [2026-10-07 · Antigravity] `src/patients/Patient.ts` (lógica pura, sin Phaser): estados, paciencia, severidad. Tests: transiciones, congelado de paciencia en tratamiento, `Perdido` a 0. Dep: —
+- [x] **T-13 · Recetas y spawner** (M) — [2026-10-07 · Antigravity] `src/config/recipes.ts` (data de `herida|fiebre|fractura|cirugia` según MECANICAS) y `PatientSpawner` (lógica pura + test de pesos/intervalos/`maxPatients`). Dep: T-12, T-03
+- [x] **T-14 · Sprite de paciente y movimiento a cama** (M) — [2026-10-07 · Antigravity] Paciente visible con barra de paciencia; leves caminan a su cama asignada; graves esperan con icono de camilla. Dep: T-13, T-04
+- [x] **T-15 · Mostrador de triaje `R`** (S) — [2026-10-07 · Antigravity] `use` 1.5 s asigna cama limpia libre; mensaje "Sin camas". Dep: T-14, T-07
+- [x] **T-16 · Cama, tratamiento y alta** (M) — [2026-10-07 · Antigravity] `B` como `Interactable`: aplicar `venda`/`jeringa` (`use` 1.5 s) cuando el paciente lo requiera; alta → paciente va a `E` y desaparece; cama pasa a sucia (estado, sin limpieza aún). Dep: T-15, T-11
+- [x] **T-17 · Puntuación** (S) — [2026-10-07 · Antigravity] `src/core/Scoring.ts` puro (fórmula de MEC-01, penalizaciones, estrellas por umbral) + tests. Dep: T-12
+- [x] **T-18 · HudScene** (M) — [2026-10-07 · Antigravity] Escena paralela: temporizador, puntos, tickets de pedido (icono, cama, barra de paciencia, pasos). Se comunica por eventos de `GameScene`. Dep: T-16, T-17
+- [x] **T-19 · Fin de nivel y ResultsScene** (S) — [2026-10-07 · Antigravity] Al llegar el tiempo a 0: `ResultsScene` con puntos, estrellas, `grab` para reintentar/menú. Registrar en `SCENE_KEYS`/`main.ts`. Dep: T-18
+- [x] **T-20 · Pausa** (S) — [2026-10-07 · Antigravity] `pause` abre overlay (reanudar / menú). Pausa también al perder foco. Dep: T-05
 
 ## Fase 3 — MEC-03 Camilla
 - [ ] **T-21 · Camilla y empuje cooperativo** (M) — `Stretcher` 2×1 (Arcade), engancharse con `grab`, movimiento = promedio de vectores de los enganchados (reglas de MEC-03, incluyendo modo 1 jugador). Dep: T-05, T-04

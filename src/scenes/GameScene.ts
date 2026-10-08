@@ -1,18 +1,26 @@
 import Phaser from 'phaser';
 import {
-  GAME_WIDTH, HUD_HEIGHT, SCENE_KEYS, TILE_SIZE, UI_COLORS,
+  GAME_HEIGHT, GAME_WIDTH, SCENE_KEYS, TILE_SIZE, UI_COLORS,
 } from '../config/constants';
 import { getInput, getRoster } from '../core/services';
-import { addText } from '../core/ui';
 import { cellToWorld, parseLayout, type ParsedLevel } from '../levels/LevelLoader';
 import { LEVEL_1 } from '../levels/nivel1';
 import { getLevelById } from '../levels/types';
 import { Player } from '../players/Player';
 import { getCellKey, getFacingCell, type Interactable } from '../world/Interactable';
+import { Dispenser } from '../world/Dispenser';
+import { Counter } from '../world/Counter';
+import { ProcessStation } from '../world/ProcessStation';
+import { Bed } from '../world/Bed';
+import { TriageDesk } from '../world/TriageDesk';
+import { PatientSpawner } from '../patients/PatientSpawner';
+import { PatientView } from '../patients/PatientView';
+import { ScoreTracker } from '../core/Scoring';
+import { addText } from '../core/ui';
 
 /**
  * ESCENA DE JUEGO.
- * Renderiza el nivel, gestiona los jugadores, colisiones, interactuables y resaltado frontal.
+ * Orquesta la física, el mapa, los jugadores, estaciones interactivas, triaje, pacientes, pausa y HUD.
  */
 export class GameScene extends Phaser.Scene {
   private levelId = '';
@@ -20,7 +28,22 @@ export class GameScene extends Phaser.Scene {
   public obstacles!: Phaser.Physics.Arcade.StaticGroup;
   public players = new Map<string, Player>();
   public interactables = new Map<string, Interactable>();
+  public beds: Bed[] = [];
+  public triageDesks: TriageDesk[] = [];
+
+  public spawner!: PatientSpawner;
+  public patientViews = new Map<string, PatientView>();
+  public scoreTracker = new ScoreTracker();
+  public remainingSec = 180;
+  public isLevelFinished = false;
+  public isPaused = false;
+
   private targetHighlights!: Phaser.GameObjects.Graphics;
+  private pauseContainer!: Phaser.GameObjects.Container;
+  private pauseOptions = ['REANUDAR', 'REINTENTAR', 'SALIR AL MENÚ'];
+  private pauseOptionLabels: Phaser.GameObjects.Text[] = [];
+  private pauseSelectedIndex = 0;
+  private prevPauseY = new Map<string, number>();
 
   constructor() {
     super(SCENE_KEYS.Game);
@@ -34,9 +57,17 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(UI_COLORS.background);
     this.players.clear();
     this.interactables.clear();
+    this.beds = [];
+    this.triageDesks = [];
+    this.patientViews.clear();
+    this.scoreTracker.reset();
+    this.isLevelFinished = false;
+    this.isPaused = false;
 
     const levelData = getLevelById(this.levelId) ?? LEVEL_1;
     this.parsedLevel = parseLayout(levelData);
+    this.remainingSec = levelData.durationSec;
+    this.spawner = new PatientSpawner(levelData);
 
     // 1. Grupo de obstáculos estáticos (física Arcade)
     this.obstacles = this.physics.add.staticGroup();
@@ -57,7 +88,7 @@ export class GameScene extends Phaser.Scene {
       wallSprite.refreshBody();
     }
 
-    // 4. Renderizar estaciones como obstáculos estáticos
+    // 4. Instanciar estaciones e interactuables
     for (const st of this.parsedLevel.stations) {
       const { x, y } = cellToWorld(st.col, st.row);
       const texKey = `station-${st.char}`;
@@ -66,16 +97,48 @@ export class GameScene extends Phaser.Scene {
       stSprite.setDepth(1);
       stSprite.refreshBody();
 
-      // Etiqueta con el tipo de estación para máxima claridad
       this.add.text(x, y, st.char, {
         fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
         fontSize: '20px',
         color: '#ffffff',
         fontStyle: 'bold',
       }).setOrigin(0.5).setDepth(2);
+
+      const key = getCellKey(st.col, st.row);
+
+      if (st.char === 'G' || st.char === 'P' || st.char === 'N' || st.char === 'M') {
+        const disp = new Dispenser({ col: st.col, row: st.row }, st.char);
+        this.interactables.set(key, disp);
+      } else if (st.char === 'C') {
+        const counter = new Counter({ col: st.col, row: st.row }, 'C');
+        this.interactables.set(key, counter);
+      } else if (st.char === 'K' || st.char === 'J' || st.char === 'L') {
+        const proc = new ProcessStation({ col: st.col, row: st.row }, st.char);
+        this.interactables.set(key, proc);
+      } else if (st.char === 'B') {
+        const bed = new Bed({ col: st.col, row: st.row }, (patient, b) => {
+          this.handlePatientDischarge(patient, b);
+        });
+        this.beds.push(bed);
+        this.interactables.set(key, bed);
+      } else if (st.char === 'R') {
+        const desk = new TriageDesk(
+          { col: st.col, row: st.row },
+          () => this.spawner.activePatients,
+          () => this.beds,
+          (res) => {
+            this.events.emit('hud:message', {
+              text: `Paciente asignado a cama (${res.bed.cell.col}, ${res.bed.cell.row})`,
+              color: '#2ec4b6',
+            });
+          }
+        );
+        this.triageDesks.push(desk);
+        this.interactables.set(key, desk);
+      }
     }
 
-    // 5. Renderizar puertas 'D' y salidas 'E' (no bloqueantes, profundidad 0.5)
+    // 5. Puertas 'D' y salidas 'E'
     for (const door of this.parsedLevel.doors) {
       const { x, y } = cellToWorld(door.col, door.row);
       this.add.image(x, y, 'station-D').setDepth(0.5);
@@ -98,13 +161,10 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(0.6);
     }
 
-    // 6. Gráficos de resaltado de la celda objetivo frontal
+    // 6. Resaltado de celda frontal
     this.targetHighlights = this.add.graphics().setDepth(3);
 
-    // 7. HUD superior temporal (hasta T-18)
-    addText(this, GAME_WIDTH / 2, HUD_HEIGHT / 2, `${levelData.name} — ESC para volver`, 22, UI_COLORS.textMuted);
-
-    // 8. Spawns de entidades Player según el Roster
+    // 7. Spawns de entidades Player
     const roster = getRoster(this);
     roster.players.forEach((slot) => {
       const spawn = this.parsedLevel.spawns[slot.index] ?? { col: 7 + slot.index, row: 4 };
@@ -112,45 +172,258 @@ export class GameScene extends Phaser.Scene {
       const player = new Player(this, x, y, slot);
       this.players.set(slot.deviceId, player);
 
-      // Colisión con obstáculos
       this.physics.add.collider(player, this.obstacles);
     });
 
-    // Colisión entre jugadores
     const playerArray = Array.from(this.players.values());
     for (let i = 0; i < playerArray.length; i++) {
       for (let j = i + 1; j < playerArray.length; j++) {
         this.physics.add.collider(playerArray[i], playerArray[j]);
       }
     }
+
+    // 8. Crear overlay de pausa (T-20)
+    this.createPauseOverlay();
+
+    // 9. Pausar al perder foco de ventana
+    this.game.events.on('blur', () => {
+      if (!this.isPaused && !this.isLevelFinished) {
+        this.togglePause(true);
+      }
+    });
+
+    // 10. Iniciar escena paralela de HUD
+    this.scene.launch(SCENE_KEYS.Hud, { levelData });
+  }
+
+  private createPauseOverlay(): void {
+    this.pauseContainer = this.add.container(0, 0).setDepth(50).setVisible(false);
+
+    // Telón translúcido
+    const bg = this.add.graphics();
+    bg.fillStyle(0x0e1726, 0.85);
+    bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    this.pauseContainer.add(bg);
+
+    // Título
+    const title = this.add.text(GAME_WIDTH / 2, 200, 'PAUSA', {
+      fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
+      fontSize: '56px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+    this.pauseContainer.add(title);
+
+    // Opciones
+    this.pauseOptionLabels = [];
+    this.pauseOptions.forEach((opt, idx) => {
+      const label = addText(this, GAME_WIDTH / 2, 330 + idx * 70, opt, 32);
+      this.pauseOptionLabels.push(label);
+      this.pauseContainer.add(label);
+    });
+
+    const hint = addText(this, GAME_WIDTH / 2, 570, 'Arriba/Abajo para elegir · AGARRAR o START para confirmar', 20, UI_COLORS.textMuted);
+    this.pauseContainer.add(hint);
+  }
+
+  public togglePause(forceState?: boolean): void {
+    this.isPaused = forceState ?? !this.isPaused;
+
+    if (this.isPaused) {
+      this.physics.pause();
+      this.pauseContainer.setVisible(true);
+      this.pauseSelectedIndex = 0;
+      this.updatePauseLabels();
+    } else {
+      this.physics.resume();
+      this.pauseContainer.setVisible(false);
+    }
+  }
+
+  private updatePauseLabels(): void {
+    this.pauseOptionLabels.forEach((lbl, i) => {
+      lbl.setColor(i === this.pauseSelectedIndex ? UI_COLORS.textAccent : UI_COLORS.text);
+    });
+  }
+
+  private handlePatientDischarge(patient: import('../patients/Patient').Patient, _bed: Bed): void {
+    const points = this.scoreTracker.addDischarge(patient);
+    const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+
+    this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
+    this.events.emit('hud:message', { text: `¡Alta exitosa! +${points} pts`, color: '#2ecc71' });
+
+    const view = this.patientViews.get(patient.id);
+    if (view && this.parsedLevel.exits.length > 0) {
+      const exitPos = cellToWorld(this.parsedLevel.exits[0]!.col, this.parsedLevel.exits[0]!.row);
+      view.walkToExit(exitPos, () => {
+        this.patientViews.delete(patient.id);
+        this.spawner.removePatient(patient.id);
+      });
+    } else {
+      view?.destroy();
+      this.patientViews.delete(patient.id);
+      this.spawner.removePatient(patient.id);
+    }
   }
 
   update(_time: number, delta: number): void {
+    if (this.isLevelFinished) return;
+
+    const deltaSec = delta / 1000;
     const input = getInput(this);
     input.update();
 
+    // Gestión del menú de pausa cuando el juego está pausado
+    if (this.isPaused) {
+      let dy = 0;
+      let confirm = false;
+      let toggle = false;
+
+      for (const d of input.getDevices()) {
+        const f = input.read(d.id);
+        const prev = this.prevPauseY.get(d.id) ?? 0;
+        if (Math.abs(f.moveY) > 0.5 && Math.abs(prev) <= 0.5) {
+          dy = Math.sign(f.moveY);
+        }
+        this.prevPauseY.set(d.id, f.moveY);
+
+        if (f.grabPressed) confirm = true;
+        if (f.pausePressed) toggle = true;
+      }
+
+      if (dy) {
+        this.pauseSelectedIndex = Phaser.Math.Wrap(this.pauseSelectedIndex + dy, 0, this.pauseOptions.length);
+        this.updatePauseLabels();
+      }
+
+      if (toggle) {
+        this.togglePause(false);
+        return;
+      }
+
+      if (confirm) {
+        if (this.pauseSelectedIndex === 0) {
+          this.togglePause(false);
+        } else if (this.pauseSelectedIndex === 1) {
+          this.scene.stop(SCENE_KEYS.Hud);
+          this.scene.restart({ levelId: this.levelId });
+        } else {
+          this.scene.stop(SCENE_KEYS.Hud);
+          this.scene.start(SCENE_KEYS.Menu);
+        }
+      }
+      return;
+    }
+
+    // 1. Temporizador de nivel
+    this.remainingSec = Math.max(0, this.remainingSec - deltaSec);
+    this.events.emit('hud:time', { remainingSec: this.remainingSec });
+
+    if (this.remainingSec <= 0) {
+      this.finishLevel();
+      return;
+    }
+
+    // 2. Generación y actualización de pacientes
+    const newPatient = this.spawner.update(deltaSec);
+    if (newPatient && this.parsedLevel.doors.length > 0) {
+      const doorCell = this.parsedLevel.doors[0]!;
+      const { x, y } = cellToWorld(doorCell.col, doorCell.row);
+      const view = new PatientView(this, x, y, newPatient);
+      this.patientViews.set(newPatient.id, view);
+    }
+
+    // Actualizar vistas de pacientes y comprobar si se perdieron
+    for (const patient of [...this.spawner.activePatients]) {
+      const view = this.patientViews.get(patient.id);
+      if (view) {
+        view.updateView();
+      }
+
+      if (patient.state === 'Perdido') {
+        this.scoreTracker.addPatientLost();
+        const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+        this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
+        this.events.emit('hud:message', { text: '¡Paciente perdido! -50 pts', color: '#e74c3c' });
+
+        if (patient.assignedBedCell) {
+          const bed = this.beds.find((b) => b.cell.col === patient.assignedBedCell?.col && b.cell.row === patient.assignedBedCell?.row);
+          bed?.releasePatient(false);
+        }
+
+        view?.destroy();
+        this.patientViews.delete(patient.id);
+        this.spawner.removePatient(patient.id);
+      }
+    }
+
+    // Emitir tickets de pedidos al HUD
+    const tickets = this.spawner.activePatients.map((p) => ({
+      id: p.id,
+      ailmentName: p.ailment.name,
+      patienceRatio: p.patienceRatio,
+      bedText: p.assignedBedCell ? `Cama (${p.assignedBedCell.col},${p.assignedBedCell.row})` : 'En espera',
+      isSevere: p.isSevere,
+    }));
+    this.events.emit('hud:orders', { tickets });
+
+    // 3. Jugadores e interacción
     this.targetHighlights.clear();
 
     for (const slot of getRoster(this).players) {
       const frame = input.read(slot.deviceId);
       const player = this.players.get(slot.deviceId);
-      if (player) {
-        player.updatePlayer(frame, delta);
-
-        // Resaltado de la celda objetivo frontal
-        const targetCell = getFacingCell(player);
-        const { x, y } = cellToWorld(targetCell.col, targetCell.row, false);
-        const targetInteractable = this.interactables.get(getCellKey(targetCell.col, targetCell.row));
-
-        // Color de resaltado según si hay interactuable o es celda vacía
-        const strokeColor = targetInteractable ? 0x2ec4b6 : slot.color;
-        this.targetHighlights.lineStyle(2, strokeColor, 0.6);
-        this.targetHighlights.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-      }
+      if (!player) continue;
 
       if (frame.pausePressed) {
-        this.scene.start(SCENE_KEYS.Menu);
+        this.togglePause(true);
+        return;
+      }
+
+      player.updatePlayer(frame, delta);
+
+      const targetCell = getFacingCell(player);
+      const key = getCellKey(targetCell.col, targetCell.row);
+      const interactable = this.interactables.get(key);
+
+      const { x, y } = cellToWorld(targetCell.col, targetCell.row, false);
+      const strokeColor = interactable ? 0x2ec4b6 : slot.color;
+      this.targetHighlights.lineStyle(2, strokeColor, 0.6);
+      this.targetHighlights.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+
+      if (interactable) {
+        const ctx = { player, cell: targetCell };
+
+        if (frame.grabPressed) {
+          interactable.onGrab?.(ctx);
+        }
+
+        if (frame.usePressed) {
+          interactable.onUseStart?.(ctx);
+        }
+
+        if (frame.use) {
+          interactable.onUseHold?.(ctx, deltaSec);
+        }
+
+        if (frame.useReleased) {
+          interactable.onUseEnd?.(ctx);
+        }
       }
     }
+  }
+
+  private finishLevel(): void {
+    this.isLevelFinished = true;
+    this.scene.stop(SCENE_KEYS.Hud);
+    const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
+    this.scene.start(SCENE_KEYS.Results ?? 'ResultsScene', {
+      levelId: this.levelId,
+      score: this.scoreTracker.score,
+      stars,
+      dischargedCount: this.scoreTracker.dischargedCount,
+      lostCount: this.scoreTracker.lostCount,
+    });
   }
 }

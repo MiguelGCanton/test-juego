@@ -112,4 +112,44 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     g.generateTexture(key, playerSize, playerSize);
     g.destroy();
   });
+
+  // 4. Texturas para pacientes (leves y graves)
+  const patientSize = 40;
+  if (!scene.textures.exists('patient-leve')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x3498db, 1);
+    g.fillCircle(patientSize / 2, patientSize / 2, patientSize / 2 - 2);
+    g.lineStyle(2, 0xffffff, 1);
+    g.strokeCircle(patientSize / 2, patientSize / 2, patientSize / 2 - 2);
+    // Cruz médica blanca
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(patientSize / 2 - 2, 8, 4, patientSize - 16);
+    g.fillRect(8, patientSize / 2 - 2, patientSize - 16, 4);
+    g.generateTexture('patient-leve', patientSize, patientSize);
+    g.destroy();
+  }
+
+  if (!scene.textures.exists('patient-grave')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0xe74c3c, 1);
+    g.fillCircle(patientSize / 2, patientSize / 2, patientSize / 2 - 2);
+    g.lineStyle(2, 0xffffff, 1);
+    g.strokeCircle(patientSize / 2, patientSize / 2, patientSize / 2 - 2);
+    // Cruz médica blanca
+    g.fillStyle(0xffffff, 1);
+    g.fillRect(patientSize / 2 - 2, 8, 4, patientSize - 16);
+    g.fillRect(8, patientSize / 2 - 2, patientSize - 16, 4);
+    g.generateTexture('patient-grave', patientSize, patientSize);
+    g.destroy();
+  }
+
+  if (!scene.textures.exists('icon-stretcher')) {
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x1abc9c, 1);
+    g.fillRoundedRect(2, 6, 28, 16, 3);
+    g.lineStyle(2, 0xffffff, 1);
+    g.strokeRoundedRect(2, 6, 28, 16, 3);
+    g.generateTexture('icon-stretcher', 32, 28);
+    g.destroy();
+  }
 }
