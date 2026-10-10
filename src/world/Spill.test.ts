@@ -73,4 +73,27 @@ describe('Spill (Derrame y mopa T-28)', () => {
     expect(spill.isCleaning).toBe(false);
     expect(onClean).toHaveBeenCalledTimes(1);
   });
+
+  it('devuelve el VisualState adecuado para el charco en reposo y frotado (T-40)', () => {
+    const spill = new Spill({ col: 5, row: 5 });
+
+    // 1. Reposo
+    let vs = spill.getVisualState();
+    expect(vs.variant).toBe('base');
+    expect(vs.activity).toBe('idle');
+    expect(vs.progress).toBeNull();
+    expect(vs.stain).toBe(1);
+
+    // 2. Frotando con mopa
+    const mockCtx: InteractionContext = {
+      player: { carriedItem: new Item('mopa') } as any,
+      cell: { col: 5, row: 5 },
+    };
+    spill.onUseHold(mockCtx, 1.0);
+    vs = spill.getVisualState();
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.kind).toBe('limpieza');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+    expect(vs.stain).toBeCloseTo(0.5, 2);
+  });
 });

@@ -5,13 +5,14 @@ import {
   BLACKOUT_MAX_DURATION_SEC,
   PANEL_FIX_TIME_SEC,
 } from '../config/constants';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 /**
  * Cuadro Eléctrico 'U' para resolver apagones (MEC-05 / T-29).
  * - En apagón: estaciones de proceso se desactivan y la pantalla se oscurece.
  * - Resolución: mantener 'use' 3.0 s en U (o auto-resolución tras 25 s).
  */
-export class ElectricPanel implements Interactable {
+export class ElectricPanel implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'U';
 
@@ -78,5 +79,32 @@ export class ElectricPanel implements Interactable {
 
   public canInteract(_ctx: InteractionContext): boolean {
     return this.isBlackoutActive;
+  }
+
+  public getVisualState(): VisualState {
+    if (this.isFixing) {
+      return {
+        variant: 'reparando',
+        activity: 'working',
+        progress: { value: this.fixTimer.progress, kind: 'proceso' },
+        badge: 'warning',
+      };
+    }
+
+    if (this.isBlackoutActive) {
+      return {
+        variant: 'averia',
+        activity: 'alert',
+        progress: null,
+        badge: 'bolt',
+      };
+    }
+
+    return {
+      variant: 'normal',
+      activity: 'idle',
+      progress: null,
+      badge: null,
+    };
   }
 }

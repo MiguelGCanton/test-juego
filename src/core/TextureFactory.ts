@@ -27,6 +27,38 @@ export const STATION_COLORS: Record<string, { bg: number; border: number; label:
   'station-U': { bg: 0xf39c12, border: 0xf7dc6f, label: 'U' }, // Cuadro eléctrico
 };
 
+export const STATION_VARIANT_DEFINITIONS: Record<string, { bg: number; border: number; innerBorder?: number; stripe?: boolean }> = {
+  // Curación K
+  'station-K-activa': { bg: 0xe67e22, border: 0xf39c12, innerBorder: 0xffffff, stripe: true },
+  // Preparación J
+  'station-J-activa': { bg: 0xaf7ac5, border: 0xd2b4de, innerBorder: 0xffffff, stripe: true },
+  // Lavabo L
+  'station-L-activa': { bg: 0x3498db, border: 0x85c1e9, innerBorder: 0xffffff, stripe: true },
+  // Cama B
+  'station-B-sucia': { bg: 0x4a4031, border: 0x6e5c46, innerBorder: 0x3d3224 },
+  'station-B-asignada': { bg: 0x16a085, border: 0xf1c40f, innerBorder: 0xf39c12 },
+  'station-B-ocupada': { bg: 0x117864, border: 0x48c9b0, innerBorder: 0xa2d9ce },
+  // Autoclave A
+  'station-A-vacio': { bg: 0x922b21, border: 0xc0392b },
+  'station-A-esterilizando': { bg: 0xd35400, border: 0xf39c12, innerBorder: 0xffeb3b, stripe: true },
+  'station-A-listo': { bg: 0x27ae60, border: 0x2ecc71, innerBorder: 0xa9dfbf },
+  'station-A-contaminado': { bg: 0x641e16, border: 0xe74c3c, innerBorder: 0xc0392b },
+  // Cuadro eléctrico U
+  'station-U-normal': { bg: 0xf39c12, border: 0xf7dc6f },
+  'station-U-averia': { bg: 0xd35400, border: 0xe74c3c, innerBorder: 0xff5722, stripe: true },
+  'station-U-reparando': { bg: 0xe67e22, border: 0xf1c40f, innerBorder: 0xffffff },
+  // Desfibrilador F
+  'station-F-descargado': { bg: 0x78281f, border: 0x922b21 },
+  'station-F-cargando': { bg: 0xd4ac0d, border: 0xf1c40f, innerBorder: 0xffffff, stripe: true },
+  'station-F-cargado': { bg: 0x229954, border: 0x2ecc71, innerBorder: 0xa9dfbf },
+  // Cirugía Q
+  'station-Q-activa': { bg: 0x212f3d, border: 0x3498db, innerBorder: 0x5dade2, stripe: true },
+  // Rayos X X
+  'station-X-activa': { bg: 0x1a5276, border: 0x2ecc71, innerBorder: 0x58d68d, stripe: true },
+  // Triaje R
+  'station-R-activa': { bg: 0x1f618d, border: 0x5499c7, innerBorder: 0xaed6f1 },
+};
+
 export const ITEM_COLORS: Record<string, number> = {
   'item-gasas': 0xfcf3cf,
   'item-vial': 0xbb8fce,
@@ -69,6 +101,52 @@ export function generatePlaceholderTextures(scene: Phaser.Scene): void {
     }
 
     g.generateTexture(key, TILE_SIZE, TILE_SIZE);
+    g.destroy();
+  }
+
+  // 1b. Texturas de variantes de estación (T-41)
+  for (const [key, conf] of Object.entries(STATION_VARIANT_DEFINITIONS)) {
+    if (scene.textures.exists(key)) continue;
+
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(conf.bg, 1);
+    g.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+
+    g.lineStyle(2, conf.border, 1);
+    g.strokeRect(1, 1, TILE_SIZE - 2, TILE_SIZE - 2);
+
+    if (conf.innerBorder) {
+      g.lineStyle(1, conf.innerBorder, 0.8);
+      g.strokeRect(5, 5, TILE_SIZE - 10, TILE_SIZE - 10);
+    }
+
+    if (conf.stripe) {
+      g.lineStyle(1, 0xffffff, 0.25);
+      g.lineBetween(10, TILE_SIZE - 10, TILE_SIZE - 10, 10);
+      g.lineBetween(18, TILE_SIZE - 10, TILE_SIZE - 10, 18);
+    }
+
+    g.generateTexture(key, TILE_SIZE, TILE_SIZE);
+    g.destroy();
+  }
+
+  // 1c. Texturas desaturadas/deshabilitadas para estaciones (station-*-disabled) (T-41)
+  for (const key of Object.keys(STATION_COLORS)) {
+    if (!key.startsWith('station-')) continue;
+    const disabledKey = `${key}-disabled`;
+    if (scene.textures.exists(disabledKey)) continue;
+
+    const g = scene.make.graphics({ x: 0, y: 0 });
+    g.fillStyle(0x232931, 1);
+    g.fillRect(0, 0, TILE_SIZE, TILE_SIZE);
+
+    g.lineStyle(2, 0x393e46, 1);
+    g.strokeRect(1, 1, TILE_SIZE - 2, TILE_SIZE - 2);
+
+    g.lineStyle(1, 0x2e353d, 0.6);
+    g.strokeRect(6, 6, TILE_SIZE - 12, TILE_SIZE - 12);
+
+    g.generateTexture(disabledKey, TILE_SIZE, TILE_SIZE);
     g.destroy();
   }
 

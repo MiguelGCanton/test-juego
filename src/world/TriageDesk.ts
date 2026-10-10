@@ -3,6 +3,7 @@ import type { Interactable, InteractionContext } from './Interactable';
 import { ProgressTimer } from '../core/ProgressTimer';
 import type { Patient } from '../patients/Patient';
 import type { Bed } from './Bed';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export interface TriageResult {
   patient: Patient;
@@ -13,7 +14,7 @@ export interface TriageResult {
  * Mostrador de triaje 'R' donde el personal sanitario clasifica pacientes
  * y les asigna una cama limpia libre mediante una acción mantenida de 1.5 s.
  */
-export class TriageDesk implements Interactable {
+export class TriageDesk implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'R';
   public readonly timer = new ProgressTimer(1.5);
@@ -85,5 +86,32 @@ export class TriageDesk implements Interactable {
 
   public canInteract(_ctx: InteractionContext): boolean {
     return this.getWaitingPatient() !== undefined;
+  }
+
+  public getVisualState(): VisualState {
+    if (this.noBedsMessage) {
+      return {
+        variant: 'base',
+        activity: 'alert',
+        progress: null,
+        badge: 'warning',
+      };
+    }
+
+    if (this.isTriaging) {
+      return {
+        variant: 'activa',
+        activity: 'working',
+        progress: { value: this.timer.progress, kind: 'proceso' },
+        badge: null,
+      };
+    }
+
+    return {
+      variant: 'base',
+      activity: 'idle',
+      progress: null,
+      badge: null,
+    };
   }
 }

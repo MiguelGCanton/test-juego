@@ -43,4 +43,33 @@ describe('ElectricPanel (Cuadro Eléctrico U T-29)', () => {
     expect(panel.isBlackoutActive).toBe(false);
     expect(onRestore).toHaveBeenCalledTimes(1);
   });
+
+  it('devuelve el VisualState adecuado para normal, avería y reparando (T-40)', () => {
+    const panel = new ElectricPanel({ col: 14, row: 7 });
+
+    // 1. Normal
+    let vs = panel.getVisualState();
+    expect(vs.variant).toBe('normal');
+    expect(vs.activity).toBe('idle');
+    expect(vs.badge).toBeNull();
+
+    // 2. Avería
+    panel.triggerBlackout();
+    vs = panel.getVisualState();
+    expect(vs.variant).toBe('averia');
+    expect(vs.activity).toBe('alert');
+    expect(vs.badge).toBe('bolt');
+
+    // 3. Reparando
+    const mockCtx: InteractionContext = {
+      player: {} as any,
+      cell: { col: 14, row: 7 },
+    };
+    panel.onUseHold(mockCtx, 1.5);
+    vs = panel.getVisualState();
+    expect(vs.variant).toBe('reparando');
+    expect(vs.activity).toBe('working');
+    expect(vs.badge).toBe('warning');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+  });
 });

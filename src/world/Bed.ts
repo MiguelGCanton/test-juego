@@ -5,6 +5,7 @@ import type { Item } from '../items/Item';
 import type { ItemType } from '../items/ItemType';
 import { ProgressTimer } from '../core/ProgressTimer';
 import { BED_CLEANING_TIME_SEC } from '../config/constants';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export type BedState = 'limpia' | 'ocupada' | 'sucia';
 
@@ -12,7 +13,7 @@ export type BedState = 'limpia' | 'ocupada' | 'sucia';
  * Cama 'B' del hospital donde se alojan, tratan y dan de alta a los pacientes.
  * Tras el alta pasa a 'sucia' y debe ser limpiada con 'sabanas' durante 2 segundos.
  */
-export class Bed implements Interactable {
+export class Bed implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'B';
   public state: BedState = 'limpia';
@@ -26,6 +27,12 @@ export class Bed implements Interactable {
   // Temporizador de limpieza de cama sucia (2.0 s con sábanas)
   public readonly cleaningTimer = new ProgressTimer(BED_CLEANING_TIME_SEC);
   public isCleaning = false;
+
+  // Estado de emergencia Código Azul
+  public hasCodeBlue = false;
+  public codeBlueWorkers = 0;
+  public codeBlueRequiredWorkers = 2;
+  public codeBlueProgress = 0;
 
   private onDischargeCallback?: (patient: Patient, bed: Bed) => void;
 
@@ -61,6 +68,7 @@ export class Bed implements Interactable {
     this.treatmentTimer.reset();
     this.isTreating = false;
     this.isCleaning = false;
+    this.hasCodeBlue = false;
     return p;
   }
 
@@ -156,5 +164,63 @@ export class Bed implements Interactable {
       return ctx.player.carriedItem?.type === req;
     }
     return false;
+  }
+
+  public getVisualState(): VisualState {
+    let variant = 'base';
+    if (this.isDirty) {
+      variant = 'sucia';
+    } else if (this.patient) {
+      if (this.patient.state === 'Triado') {
+        variant = 'asignada';
+      } else {
+        variant = 'ocupada';
+      }
+    }
+
+    let activity: VisualState['activity'] = 'idle';
+    if (this.hasCodeBlue) {
+      activity = 'alert';
+    } else if (this.isTreating || this.isCleaning) {
+      activity = 'working';
+    } else if (this.isOccupied || this.isDirty) {
+      activity = 'loaded';
+    }
+
+    let progress: VisualState['progress'] = null;
+    if (this.hasCodeBlue) {
+      progress = { value: this.codeBlueProgress, kind: 'alerta' };
+    } else if (this.isCleaning) {
+      progress = { value: this.cleaningTimer.progress, kind: 'limpieza' };
+    } else if (this.isTreating) {
+      progress = { value: this.treatmentTimer.progress, kind: 'tratamiento' };
+    }
+
+    const stain = this.isDirty
+      ? (this.isCleaning ? Math.max(0, 1 - this.cleaningTimer.progress) : 1)
+      : 0;
+
+    const workers = this.hasCodeBlue
+      ? { current: this.codeBlueWorkers, required: this.codeBlueRequiredWorkers }
+      : null;
+
+    const badge = this.hasCodeBlue ? 'warning' : null;
+
+    const reqItem = this.isTreating ? this.getRequiredItemType() : null;
+    const item = reqItem
+      ? { type: reqItem }
+      : this.storedItem
+        ? { type: this.storedItem.type }
+        : null;
+
+    return {
+      variant,
+      activity,
+      item,
+      progress,
+      workers,
+      badge,
+      stain,
+    };
   }
 }

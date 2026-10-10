@@ -1,8 +1,8 @@
 # Matriz de Pruebas y Checklist QA — Código Caos
 
 > Documento de control de calidad y verificación integral para *Código Caos*.
-> Fecha de validación: 2026-10-07 · Antigravity
-> Estado general: **100 % APROBADO** (24 suites de tests unitarios, 85/85 tests pasando, build de producción limpio).
+> Fecha de validación: 2026-10-10 · Antigravity
+> Estado general: **100 % APROBADO** (26 suites de tests unitarios, 100/100 tests pasando, build de producción limpio).
 
 ---
 
@@ -62,7 +62,34 @@
 
 - [x] **Desconexión de mandos (T-31)**: Al desconectar un gamepad en partida, el juego se pausa automáticamente y muestra el aviso contextual `⚠️ Mando de P# desconectado. Por favor, reconéctalo para continuar.` No permite reanudar hasta reconectar el dispositivo.
 - [x] **Escalado por jugadores (T-32)**: Configuración automática de parámetros en `PatientSpawner` y estaciones (`1P`, `2P`, `3-4P`).
-- [x] **Audio procedural WebAudio (T-33)**: Sintetizador WebAudio sin dependencias de red: `pickup`, `drop`, `processComplete`, `discharge`, `patientLost`, `emergencyAlarm`, `dash`, `slip`, `defibShock`, navegación de menú.
+- [x] **Audio procedural WebAudio (T-33)**: Sintetizador WebAudio sin dependencias de red: `pickup`, `drop`, `processComplete`, `discharge`, `patientLost`, `emergencyAlarm`, `dash`, `slip`, `defibShock`, `error`, navegación de menú.
 - [x] **Onboarding Nivel 1 (T-34)**: Paciente 1 garantizado `herida`, paciente 2 garantizado `fiebre`, `fractura` bloqueada los primeros 45 s; barra de tutorial dinámica en la parte inferior guiando paso a paso.
 - [x] **Menú de pausa y desenfoque (T-20)**: Menú de pausa navegable con teclado/gamepad; pausa automática al perder foco (`blur`).
 - [x] **Pantalla de resultados y ciclo de juego**: Estadísticas completas de altas, pérdidas, estrellas y opciones de Reintentar / Niveles / Menú.
+
+---
+
+## 4. Fase 7 — MEC-06: Estado Visual de Objetos
+
+- [x] **Contrato `VisualState` e interfaz pura (T-36)**: `VisualStateProvider` implementado sin dependencias de Phaser en todos los interactuables (`Counter`, `ProcessStation`, `Bed`, `Autoclave`, `SurgeryTable`, `XRayStation`, `Dispenser`, `TriageDesk`, `ElectricPanel`, `DefibrillatorStation`, `Spill`).
+- [x] **Encimeras y Procesamiento (T-37)**: Ítems apoyados visibles con sombra; estaciones `K`, `J`, `L` reflejan variantes `base`/`activa`, progreso, pausa y badge ✔ al completar.
+- [x] **Camas hospitalarias (T-38, T-47)**: Estados `base`, `asignada` (contorno de ticket), `ocupada`, `sucia` con manchas que se desvanecen proporcionalmente a la limpieza (`stain = 1 − progreso`), tratamiento con barra verde e icono del ítem aplicado, y badge ⚠ de Código Azul.
+- [x] **Estaciones complejas (T-39)**:
+  - `Autoclave`: 4 variantes (`vacio`, `esterilizando`, `listo`, `contaminado`), doble barra (proceso en esterilización + alerta de contaminación creciente al estar listo).
+  - `SurgeryTable`: visualización de ranuras/slots para instrumental y anestesia, overlay de cirujanos requeridos/actuales (`workers`), barra de cirugía.
+  - `XRayStation`: escaneo con barra y variante `activa`/`base`.
+- [x] **Estaciones de servicio y emergencias (T-40)**:
+  - `Dispenser`: selección activa visible en armario `M` (sábanas/mopa).
+  - `TriageDesk`: progreso de triaje y badge ⚠ cuando no hay camas libres.
+  - `ElectricPanel`: estados `normal`, `averia` y `reparando`.
+  - `DefibrillatorStation`: variantes `descargado`, `cargando` (barra de carga) y `cargado` (ítem listo).
+  - `Spill`: charco que se encoge (`scale = 1 − 0.7·progreso`) y se aclara durante el fregado con mopa.
+- [x] **Texturas procedimentales variantes (T-41)**: Generación dinámica en `TextureFactory` de variantes `activa`, `sucia`, `esterilizando`, `listo`, `contaminado`, `averia`, `cargando`, y desaturadas `station-*-disabled` para apagones.
+- [x] **Componente `WorldProgressBar` (T-42)**: Barra de 48×6 px posicionada sobre las celdas con colores diferenciados por `ProgressKind` (naranja, azul, verde, amarillo, rojo), modo atenuado (alpha 0.5 + ⏸) en pausa y ocultable.
+- [x] **Renderizador `StationView` (T-43)**: Enlace genérico desacoplado que actualiza texturas, iconos a 36 px con sombra, slots, barras, insignias y contornos en cada frame.
+- [x] **Animaciones y feedback reactivo (T-44, T-45, T-46)**:
+  - Pop de escala (1.2 $\rightarrow$ 1.0 en 0.12 s) al soltar ítem y desvanecimiento al tomarlo.
+  - Vibración ±1 px durante el procesado activo, destello blanco de 0.15 s y badge temporal ✔ al completar.
+  - Parpadeo rojo a 2 Hz y badge ⚠ en alertas; tinte gris y badge ⚡ en apagones.
+  - Rechazo de acción inválida: sacudida horizontal ±3 px, contorno rojo durante 0.25 s y SFX procedural `error`.
+  - Resaltado frontal dinámico: pasa de cian a gris cuando `canInteract` es falso.

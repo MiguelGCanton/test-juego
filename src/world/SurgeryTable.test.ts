@@ -111,4 +111,61 @@ describe('SurgeryTable (Mesa Quirúrgica Q)', () => {
     // Como solo queda P2, no avanza
     expect(table.progress).toBeCloseTo(0.5);
   });
+
+  it('devuelve el VisualState adecuado con slots, workers y progreso (T-39)', () => {
+    const pCirugia = new Patient('cirugia');
+    const mockStretcher = {
+      patient: pCirugia,
+      isAdjacentToCell: () => true,
+    } as any;
+
+    const table = new SurgeryTable(
+      { col: 16, row: 1 },
+      () => mockStretcher,
+      () => 2,
+      false
+    );
+
+    // 1. Vacía
+    let vs = table.getVisualState();
+    expect(vs.variant).toBe('base');
+    expect(vs.activity).toBe('idle');
+    expect(vs.slots).toEqual([null, null]);
+
+    // 2. Con instrumental limpio y anestesia
+    table.hasCleanInstrument = true;
+    table.hasAnesthesia = true;
+    vs = table.getVisualState();
+    expect(vs.activity).toBe('loaded');
+    expect(vs.slots).toEqual([
+      { type: 'instrumental_limpio' },
+      { type: 'anestesia' },
+    ]);
+    expect(vs.workers).toEqual({ current: 0, required: 2 });
+
+    // 3. Operando
+    const ctx1: InteractionContext = {
+      player: { slot: { deviceId: 'dev-1' } } as any,
+      cell: { col: 16, row: 1 },
+    };
+    const ctx2: InteractionContext = {
+      player: { slot: { deviceId: 'dev-2' } } as any,
+      cell: { col: 16, row: 1 },
+    };
+    table.onUseHold(ctx1, 0);
+    table.onUseHold(ctx2, 3.0);
+    vs = table.getVisualState();
+    expect(vs.variant).toBe('activa');
+    expect(vs.activity).toBe('working');
+    expect(vs.workers).toEqual({ current: 2, required: 2 });
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+
+    // 4. Completada (con instrumental sucio)
+    table.onUseHold(ctx1, 0);
+    table.onUseHold(ctx2, 3.0);
+    vs = table.getVisualState();
+    expect(vs.activity).toBe('done');
+    expect(vs.badge).toBe('check');
+    expect(vs.item?.type).toBe('instrumental_sucio');
+  });
 });

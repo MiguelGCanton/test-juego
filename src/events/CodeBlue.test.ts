@@ -80,4 +80,34 @@ describe('CodeBlueManager & DefibrillatorStation (MEC-05 / T-30)', () => {
     expect(bed.isOccupied).toBe(false);
     expect(onResolution).toHaveBeenCalledWith(false, -150);
   });
+
+  it('devuelve el VisualState adecuado para DefibrillatorStation (T-40)', () => {
+    const station = new DefibrillatorStation({ col: 18, row: 2 });
+
+    // 1. Descargado
+    let vs = station.getVisualState();
+    expect(vs.variant).toBe('descargado');
+    expect(vs.activity).toBe('idle');
+
+    // 2. Cargando
+    const mockCtx: InteractionContext = {
+      player: { hasItem: () => false, pickUp: () => true } as any,
+      cell: { col: 18, row: 2 },
+    };
+    station.onUseHold(mockCtx, 1.5);
+    vs = station.getVisualState();
+    expect(vs.variant).toBe('cargando');
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.kind).toBe('carga');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+
+    // 3. Cargado (cuando queda en la estación si manos llenas)
+    station.isCharging = false;
+    station.isCharged = true;
+    vs = station.getVisualState();
+    expect(vs.variant).toBe('cargado');
+    expect(vs.activity).toBe('done');
+    expect(vs.badge).toBe('check');
+    expect(vs.item?.type).toBe('desfibrilador');
+  });
 });

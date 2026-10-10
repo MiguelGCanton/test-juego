@@ -60,4 +60,39 @@ describe('XRayStation', () => {
     expect(onComplete).toHaveBeenCalledWith(pFractura);
     expect(station.isScanning).toBe(false);
   });
+
+  it('devuelve el VisualState adecuado para reposo, escaneo y pausa (T-39)', () => {
+    const pFractura = new Patient('fractura');
+    const mockStretcher = {
+      patient: pFractura,
+      isAdjacentToCell: () => true,
+    } as any;
+
+    const station = new XRayStation({ col: 5, row: 5 }, () => mockStretcher);
+    const mockCtx: InteractionContext = {
+      player: {} as any,
+      cell: { col: 5, row: 5 },
+    };
+
+    // 1. Reposo
+    let vs = station.getVisualState();
+    expect(vs.variant).toBe('base');
+    expect(vs.activity).toBe('idle');
+    expect(vs.progress).toBeNull();
+
+    // 2. Escaneando (working)
+    station.onUseHold(mockCtx, 2.0);
+    vs = station.getVisualState();
+    expect(vs.variant).toBe('activa');
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+    expect(vs.progress?.kind).toBe('proceso');
+
+    // 3. Pausa
+    station.onUseEnd(mockCtx);
+    vs = station.getVisualState();
+    expect(vs.variant).toBe('base');
+    expect(vs.activity).toBe('paused');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+  });
 });

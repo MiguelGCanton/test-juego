@@ -20,6 +20,7 @@ describe('SoundManager (T-33)', () => {
       sound.playMenuMove();
       sound.playMenuSelect();
       sound.playTriage();
+      sound.playError();
     }).not.toThrow();
   });
 

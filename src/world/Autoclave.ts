@@ -6,6 +6,7 @@ import {
   AUTOCLAVE_CONTAMINATION_TIME_SEC,
   AUTOCLAVE_PROCESS_TIME_SEC,
 } from '../config/constants';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export type AutoclaveState = 'vacio' | 'esterilizando' | 'listo' | 'contaminado';
 
@@ -15,7 +16,7 @@ export type AutoclaveState = 'vacio' | 'esterilizando' | 'listo' | 'contaminado'
  * - Esteriliza automáticamente durante 8 segundos -> 'instrumental_limpio'.
  * - Si no se recoge en 20 segundos -> se contamina y vuelve a 'instrumental_sucio'.
  */
-export class Autoclave implements Interactable {
+export class Autoclave implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'A';
   public storedItem: Item | null = null;
@@ -124,5 +125,31 @@ export class Autoclave implements Interactable {
     if (this.storedItem !== null && !ctx.player.hasItem()) return true;
     if (this.storedItem === null && ctx.player.carriedItem?.type === 'instrumental_mojado') return true;
     return false;
+  }
+
+  public getVisualState(): VisualState {
+    let activity: VisualState['activity'] = 'idle';
+    let progress: VisualState['progress'] = null;
+    let badge: VisualState['badge'] = null;
+
+    if (this.state === 'esterilizando') {
+      activity = 'working';
+      progress = { value: this.processTimer.progress, kind: 'proceso' };
+    } else if (this.state === 'listo') {
+      activity = 'done';
+      progress = { value: this.contaminationTimer.progress, kind: 'alerta' };
+      badge = 'check';
+    } else if (this.state === 'contaminado') {
+      activity = 'alert';
+      badge = 'warning';
+    }
+
+    return {
+      variant: this.state,
+      activity,
+      item: this.storedItem ? { type: this.storedItem.type } : null,
+      progress,
+      badge,
+    };
   }
 }

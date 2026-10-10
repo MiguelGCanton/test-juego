@@ -1,12 +1,13 @@
 import type { GridPos } from '../levels/LevelLoader';
 import type { Interactable, InteractionContext } from './Interactable';
 import type { Item } from '../items/Item';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 /**
  * Encimera 'C' que permite depositar o recoger un ítem.
  * Base para superficies de apoyo y estaciones de procesado.
  */
-export class Counter implements Interactable {
+export class Counter implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type: string;
   public storedItem: Item | null = null;
@@ -57,5 +58,15 @@ export class Counter implements Interactable {
 
   public canInteract(ctx: InteractionContext): boolean {
     return (ctx.player.hasItem() && !this.hasItem()) || (!ctx.player.hasItem() && this.hasItem());
+  }
+
+  public getVisualState(): VisualState {
+    return {
+      variant: 'base',
+      activity: this.hasItem() ? 'loaded' : 'idle',
+      item: this.storedItem ? { type: this.storedItem.type } : null,
+      progress: null,
+      badge: null,
+    };
   }
 }

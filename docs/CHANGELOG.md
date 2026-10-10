@@ -2,6 +2,22 @@
 
 Formato: `fecha · autor · cambio`. Más reciente arriba.
 
+## 2026-10-10 · Antigravity (Fase 7 — MEC-06 Estado visual de objetos)
+- Implementación completa de las 13 tareas (T-36..T-48) de la **Fase 7 (MEC-06 Estado visual de objetos)**:
+  - **T-36:** Contrato `VisualState`, `VisualActivity`, `ProgressKind` e interfaz `VisualStateProvider` (`src/world/VisualState.ts`).
+  - **T-37:** Soporte de `getVisualState()` en `Counter` y `ProcessStation` con variantes, estados de pausa, carga, proceso y deshabilitado.
+  - **T-38:** Soporte de `getVisualState()` en `Bed` con variantes `base`, `asignada`, `ocupada`, `sucia`, progreso de curación y limpieza, manchas progresivas (`stain`) y badge/workers para Código Azul.
+  - **T-39:** Soporte de `getVisualState()` en `Autoclave` (doble barra: proceso y contaminación), `SurgeryTable` (ranuras/slots multi-ítem, workers requeridos y progreso de cirugía), y `XRayStation` (progreso de escaneo).
+  - **T-40:** Soporte de `getVisualState()` en `Dispenser` (selección visible de sábanas/mopa en armario M), `TriageDesk` (progreso y badge de sin camas), `ElectricPanel` (normal/avería/reparando), `DefibrillatorStation` (descargado/cargando/cargado) y `Spill` (progreso de fregado).
+  - **T-41:** Generación en `TextureFactory` de texturas variantes procedimentales (`activa`, `sucia`, `esterilizando`, `listo`, `contaminado`, `averia`, `cargando`, etc.) y desaturadas `station-*-disabled` para apagones.
+  - **T-42:** Componente visual flotante `WorldProgressBar` (`src/core/WorldProgressBar.ts`) de 48×6 px con colores según `ProgressKind`, modo atenuado con icono de pausa y visibilidad dinámica.
+  - **T-43:** Componente renderizador genérico `StationView` (`src/world/StationView.ts`) desacoplado de Phaser que sincroniza cada frame el estado visual con sprites, iconos a 36 px con sombra, slots, badges e indicadores.
+  - **T-44:** Animaciones de feedback para soltar ítem (*pop* de escala 1.2→1.0 en 0.12 s) y recoger ítem (vuelo/elevación 0.1 s).
+  - **T-45:** Animaciones de procesamiento (vibración ±1 px), pausa (barra atenuada) y finalización (destello blanco 0.15 s y badge temporal ✔ de 1.0 s).
+  - **T-46:** Alertas con parpadeo rojo a 2 Hz y badge ⚠, deshabilitado gris con badge ⚡, y rechazo de acción inválida (sacudida ±3 px, contorno rojo 0.25 s y SFX procedural `error` en `SoundManager`). Contorno de interactuable frontal pasa de cian a gris si `canInteract` es falso.
+  - **T-47:** Integración visual progresiva en camas (manchas se desvanecen con `stain = 1 - progress`) y charcos (se encogen a `scale = 1 - 0.7*progress` y se aclaran con el fregado).
+  - **T-48:** Matriz de pruebas y checklist QA actualizada al 100% en `docs/QA.md`. 100 tests pasando exitosamente.
+
 ## 2026-10-08 · Antigravity (Fase 7 — diseño)
 - Diseño completo de la **Fase 7 (MEC-06 · Estado visual de objetos)**: 13 tareas atómicas (T-36…T-48) en `docs/TAREAS.md` cubriendo contrato `VisualState` puro, implementación de `getVisualState()` en todas las estaciones, texturas variantes procedimentales, `WorldProgressBar`, `StationView` genérico, animaciones de feedback (pop, vibración, sacudida, destello, parpadeo), integración visual de camas/charcos y QA.
 - 5 nuevas decisiones arquitectónicas (DEC-019…DEC-023) en `docs/DECISIONES.md`: contrato puro `VisualState`, `StationView` genérico, texturas variantes como claves separadas, `WorldProgressBar` reutilizable, feedback de rechazo centralizado.
