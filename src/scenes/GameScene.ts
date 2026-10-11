@@ -20,12 +20,12 @@ import { SurgeryTable } from '../world/SurgeryTable';
 import { ElectricPanel } from '../world/ElectricPanel';
 import { DefibrillatorStation } from '../world/DefibrillatorStation';
 import { Spill } from '../world/Spill';
+import { StationView } from '../world/StationView';
 import { EventDirector, type EventType } from '../events/EventDirector';
 import { CodeBlueManager } from '../events/CodeBlueManager';
 import { PatientSpawner } from '../patients/PatientSpawner';
 import { PatientView } from '../patients/PatientView';
 import { ScoreTracker } from '../core/Scoring';
-import { addText } from '../core/ui';
 
 /**
  * ESCENA DE JUEGO.
@@ -37,6 +37,8 @@ export class GameScene extends Phaser.Scene {
   public obstacles!: Phaser.Physics.Arcade.StaticGroup;
   public players = new Map<string, Player>();
   public interactables = new Map<string, Interactable>();
+  public stationViews = new Map<string, StationView>();
+  public processStations: ProcessStation[] = [];
   public beds: Bed[] = [];
   public triageDesks: TriageDesk[] = [];
   public xRayStations: XRayStation[] = [];
@@ -81,6 +83,8 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(UI_COLORS.background);
     this.players.clear();
     this.interactables.clear();
+    this.stationViews.clear();
+    this.processStations = [];
     this.beds = [];
     this.triageDesks = [];
     this.patientViews.clear();
@@ -141,6 +145,7 @@ export class GameScene extends Phaser.Scene {
         const proc = new ProcessStation({ col: st.col, row: st.row }, st.char, undefined, () => {
           getSound(this)?.playProcessComplete();
         });
+        this.processStations.push(proc);
         this.interactables.set(key, proc);
       } else if (st.char === 'B') {
         const bed = new Bed({ col: st.col, row: st.row }, (patient, b) => {
@@ -199,6 +204,7 @@ export class GameScene extends Phaser.Scene {
         const panel = new ElectricPanel({ col: st.col, row: st.row }, () => {
           this.eventDirector.endEvent('blackout', true);
           this.blackoutGraphics.setVisible(false);
+          this.processStations.forEach((ps) => { ps.isDisabled = false; });
           getSound(this)?.playProcessComplete();
           this.events.emit('hud:message', {
             text: '¡Energía restablecida en el hospital!',
@@ -232,6 +238,12 @@ export class GameScene extends Phaser.Scene {
         );
         this.triageDesks.push(desk);
         this.interactables.set(key, desk);
+      }
+
+      const createdInteractable = this.interactables.get(key);
+      if (createdInteractable) {
+        const view = new StationView(this, createdInteractable, stSprite, texKey);
+        this.stationViews.set(key, view);
       }
     }
 
@@ -397,6 +409,7 @@ export class GameScene extends Phaser.Scene {
       this.spawnRandomSpill();
     } else if (type === 'blackout') {
       this.electricPanels.forEach((p) => p.triggerBlackout());
+      this.processStations.forEach((ps) => { ps.isDisabled = true; });
       this.blackoutGraphics.setVisible(true);
       this.events.emit('hud:message', {
         text: '¡APAGÓN! Máquinas apagadas. Repara el cuadro (U)',
@@ -432,6 +445,11 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.add.image(x, y, 'spill-puddle').setDepth(0.8);
     const spill = new Spill(floor, () => {
       sprite.destroy();
+      const view = this.stationViews.get(key);
+      if (view) {
+        view.destroy();
+        this.stationViews.delete(key);
+      }
       this.spills.delete(key);
       this.interactables.delete(key);
       this.eventDirector.endEvent('spill', true);
@@ -443,6 +461,8 @@ export class GameScene extends Phaser.Scene {
 
     this.spills.set(key, { spill, sprite });
     this.interactables.set(key, spill);
+    const view = new StationView(this, spill, sprite, 'spill-puddle');
+    this.stationViews.set(key, view);
 
     this.events.emit('hud:message', {
       text: '¡Derrame en el suelo! Cuidado con resbalar, usa la mopa (M)',
@@ -479,63 +499,44 @@ export class GameScene extends Phaser.Scene {
     this.pauseContainer.add(this.disconnectBannerText);
 
     // Opciones
-    this.pauseOptionLabels = [];
-    this.pauseOptions.forEach((opt, idx) => {
-      const label = addText(this, GAME_WIDTH / 2, 330 + idx * 70, opt, 32);
-      this.pauseOptionLabels.push(label);
-      this.pauseContainer.add(label);
+    this.pauseOptionLabels = this.pauseOptions.map((opt, idx) => {
+      const txt = this.add.text(GAME_WIDTH / 2, 340 + idx * 60, opt, {
+        fontFamily: '"Fredoka", "Trebuchet MS", sans-serif',
+        fontSize: '28px',
+        color: idx === 0 ? '#2ec4b6' : '#ffffff',
+        fontStyle: 'bold',
+      }).setOrigin(0.5);
+      this.pauseContainer.add(txt);
+      return txt;
     });
-
-    const hint = addText(this, GAME_WIDTH / 2, 570, 'Arriba/Abajo para elegir · AGARRAR o START para confirmar', 20, UI_COLORS.textMuted);
-    this.pauseContainer.add(hint);
   }
 
-  public togglePause(forceState?: boolean): void {
-    const input = getInput(this);
-    const hasDisconnectedDevice = getRoster(this).players.some((p) => !input.isDeviceConnected(p.deviceId));
-
-    // Si hay un mando desconectado y se intenta reanudar, mantener la pausa con el aviso
-    if (forceState === false && hasDisconnectedDevice) {
-      this.disconnectBannerText
-        .setText('⚠️ MANDO DESCONECTADO\nPor favor, reconecta el mando para reanudar.')
-        .setVisible(true);
-      return;
-    }
-
-    this.isPaused = forceState ?? !this.isPaused;
-
+  private togglePause(forceState?: boolean): void {
+    this.isPaused = forceState !== undefined ? forceState : !this.isPaused;
+    this.pauseContainer.setVisible(this.isPaused);
     if (this.isPaused) {
-      this.physics.pause();
-      this.pauseContainer.setVisible(true);
       this.pauseSelectedIndex = 0;
       this.updatePauseLabels();
-      if (!hasDisconnectedDevice) {
-        this.disconnectBannerText.setVisible(false);
-      }
-    } else {
-      this.physics.resume();
-      this.pauseContainer.setVisible(false);
-      this.disconnectBannerText.setVisible(false);
     }
   }
 
   private updatePauseLabels(): void {
-    this.pauseOptionLabels.forEach((lbl, i) => {
-      lbl.setColor(i === this.pauseSelectedIndex ? UI_COLORS.textAccent : UI_COLORS.text);
+    this.pauseOptionLabels.forEach((label, idx) => {
+      const selected = idx === this.pauseSelectedIndex;
+      label.setColor(selected ? '#2ec4b6' : '#ffffff');
+      label.setScale(selected ? 1.15 : 1);
     });
   }
 
   private handlePatientDischarge(patient: import('../patients/Patient').Patient, _bed?: Bed): void {
-    if (this.stretcher && this.stretcher.patient?.id === patient.id) {
-      this.stretcher.releasePatient();
-    }
-
     const points = this.scoreTracker.addDischarge(patient);
-    const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
-
     getSound(this)?.playDischarge();
+    const stars = this.scoreTracker.getStars(this.parsedLevel.data.stars);
     this.events.emit('hud:score', { score: this.scoreTracker.score, stars });
-    this.events.emit('hud:message', { text: `¡Alta exitosa! +${points} pts`, color: '#2ecc71' });
+    this.events.emit('hud:message', {
+      text: `¡Paciente dado de alta! +${points} pts`,
+      color: '#2ecc71',
+    });
 
     const view = this.patientViews.get(patient.id);
     if (view && this.parsedLevel.exits.length > 0) {
@@ -605,17 +606,33 @@ export class GameScene extends Phaser.Scene {
           }
         }
       }
+
+      targetBed.hasCodeBlue = true;
+      targetBed.codeBlueWorkers = this.codeBlueManager.participatingPlayerIds.size;
+      targetBed.codeBlueRequiredWorkers = getRoster(this).players.length > 1 ? 2 : 1;
+      targetBed.codeBlueProgress = this.codeBlueManager.treatmentProgress;
+    } else {
+      for (const bed of this.beds) {
+        bed.hasCodeBlue = false;
+      }
     }
 
     // Renderizar oscuridad de apagón si está activo (T-29)
     const isBlackout = this.electricPanels.some((p) => p.isBlackoutActive);
     if (isBlackout) {
+      this.processStations.forEach((ps) => { ps.isDisabled = true; });
       this.blackoutGraphics.setVisible(true);
       this.blackoutGraphics.clear();
       this.blackoutGraphics.fillStyle(0x050a14, 0.94);
       this.blackoutGraphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     } else {
+      this.processStations.forEach((ps) => { ps.isDisabled = false; });
       this.blackoutGraphics.setVisible(false);
+    }
+
+    // Actualizar vistas visuales de estaciones (T-43..T-47)
+    for (const view of this.stationViews.values()) {
+      view.update(deltaSec);
     }
 
     // Gestión del menú de pausa cuando el juego está pausado
@@ -758,7 +775,12 @@ export class GameScene extends Phaser.Scene {
       const interactable = this.interactables.get(key);
 
       const { x, y } = cellToWorld(targetCell.col, targetCell.row, false);
-      const strokeColor = interactable ? 0x2ec4b6 : slot.color;
+      let strokeColor = slot.color;
+      if (interactable) {
+        const can = interactable.canInteract ? interactable.canInteract({ player, cell: targetCell }) : true;
+        // T-46: El contorno resaltado pasa de cian a gris cuando canInteract es falso
+        strokeColor = can ? 0x2ec4b6 : 0x7f8c8d;
+      }
       this.targetHighlights.lineStyle(2, strokeColor, 0.6);
       this.targetHighlights.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
 
@@ -771,7 +793,12 @@ export class GameScene extends Phaser.Scene {
         const ctx = { player, cell: targetCell };
 
         if (frame.grabPressed) {
-          interactable.onGrab?.(ctx);
+          const res = interactable.onGrab?.(ctx);
+          if (res === false) {
+            // T-46 / DEC-023: Acción inválida rechazada
+            const view = this.stationViews.get(key);
+            view?.rejectInteraction();
+          }
         }
 
         if (frame.usePressed) {
@@ -823,9 +850,7 @@ export class GameScene extends Phaser.Scene {
             }
           }
         }
-      }
-
-      if (frame.useReleased && isNearStretcher) {
+      } else if (isNearStretcher && frame.useReleased) {
         this.stretcher.transferTimer.reset();
         this.stretcher.clearTransferProgress();
       }

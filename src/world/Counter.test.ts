@@ -60,4 +60,18 @@ describe('Counter (Encimera C)', () => {
     expect(result).toBe(false);
     expect(counter.storedItem?.type).toBe('vial');
   });
+
+  it('devuelve el VisualState adecuado según si tiene ítem o no (T-37)', () => {
+    const counter = new Counter({ col: 1, row: 1 });
+    const emptyState = counter.getVisualState();
+    expect(emptyState.variant).toBe('base');
+    expect(emptyState.activity).toBe('idle');
+    expect(emptyState.item).toBeNull();
+
+    counter.placeItem(new Item('venda'));
+    const loadedState = counter.getVisualState();
+    expect(loadedState.variant).toBe('base');
+    expect(loadedState.activity).toBe('loaded');
+    expect(loadedState.item?.type).toBe('venda');
+  });
 });

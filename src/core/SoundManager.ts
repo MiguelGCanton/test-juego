@@ -160,4 +160,9 @@ export class SoundManager {
   public playTriage(): void {
     this.playTone(440, 660, 0.15, 'sine', 0.12);
   }
+
+  /** SFX: Acción inválida / rechazo de interacción (T-46) */
+  public playError(): void {
+    this.playTone(200, 100, 0.15, 'sawtooth', 0.15);
+  }
 }

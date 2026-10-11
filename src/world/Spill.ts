@@ -3,13 +3,14 @@ import type { Interactable, InteractionContext } from './Interactable';
 import { ProgressTimer } from '../core/ProgressTimer';
 import { SLIP_DURATION_SEC, SPILL_CLEAN_TIME_SEC } from '../config/constants';
 import type { Player } from '../players/Player';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 /**
  * Charco de derrame (MEC-05 / T-28).
  * - Quien lo pise (sin dash) resbala durante 0.6 s y suelta su ítem.
  * - Limpieza: portar 'mopa' y mantener 'use' durante 2.0 s.
  */
-export class Spill implements Interactable {
+export class Spill implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'spill';
   public readonly cleanTimer = new ProgressTimer(SPILL_CLEAN_TIME_SEC);
@@ -54,5 +55,19 @@ export class Spill implements Interactable {
 
   public canInteract(ctx: InteractionContext): boolean {
     return ctx.player.carriedItem?.type === 'mopa';
+  }
+
+  public getVisualState(): VisualState {
+    const isWorking = this.isCleaning;
+    const hasProgress = this.cleanTimer.progress > 0;
+    return {
+      variant: 'base',
+      activity: isWorking ? 'working' : (hasProgress ? 'paused' : 'idle'),
+      progress: (isWorking || hasProgress)
+        ? { value: this.cleanTimer.progress, kind: 'limpieza' }
+        : null,
+      badge: null,
+      stain: Math.max(0, 1 - this.cleanTimer.progress),
+    };
   }
 }

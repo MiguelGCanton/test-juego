@@ -41,4 +41,14 @@ describe('Dispenser', () => {
     closet.onUseStart({ player: {} as any, cell: { col: 1, row: 8 } });
     expect(closet.selectedItemType).toBe('sabanas');
   });
+
+  it('expone el ítem seleccionado en el VisualState para armario M (T-40)', () => {
+    const closet = new Dispenser({ col: 1, row: 8 }, 'M');
+    let vs = closet.getVisualState();
+    expect(vs.item?.type).toBe('sabanas');
+
+    closet.onUseStart({ player: {} as any, cell: { col: 1, row: 8 } });
+    vs = closet.getVisualState();
+    expect(vs.item?.type).toBe('mopa');
+  });
 });

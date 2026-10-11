@@ -84,4 +84,71 @@ describe('Bed (Cama B) & Treatment', () => {
     expect(bed.isClean).toBe(true);
     expect(carriedItem).toBeNull();
   });
+
+  it('devuelve el VisualState adecuado para todas las combinaciones de estado (T-38)', () => {
+    const bed = new Bed({ col: 2, row: 2 });
+
+    // 1. Base limpia
+    let vs = bed.getVisualState();
+    expect(vs.variant).toBe('base');
+    expect(vs.activity).toBe('idle');
+    expect(vs.stain).toBe(0);
+    expect(vs.badge).toBeNull();
+    expect(vs.progress).toBeNull();
+
+    // 2. Asignada (paciente triado caminando hacia la cama)
+    const patient = new Patient('herida');
+    patient.triage({ col: 2, row: 2 });
+    bed.assignPatient(patient);
+    vs = bed.getVisualState();
+    expect(vs.variant).toBe('asignada');
+
+    // 3. Ocupada (paciente en cama)
+    patient.putInBed();
+    vs = bed.getVisualState();
+    expect(vs.variant).toBe('ocupada');
+    expect(vs.activity).toBe('loaded');
+
+    // 4. Tratando
+    const playerWithVenda = {
+      carriedItem: new Item('venda'),
+      drop: () => null,
+    };
+    bed.onUseHold({ player: playerWithVenda as any, cell: { col: 2, row: 2 } }, 0.5);
+    vs = bed.getVisualState();
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.kind).toBe('tratamiento');
+    expect(vs.progress?.value).toBeCloseTo(0.5 / 1.5, 2);
+    expect(vs.item?.type).toBe('venda');
+
+    // 5. Sucia tras alta
+    bed.releasePatient(true);
+    vs = bed.getVisualState();
+    expect(vs.variant).toBe('sucia');
+    expect(vs.stain).toBe(1);
+    expect(vs.progress).toBeNull();
+
+    // 6. Limpiando (desvanecimiento progresivo de stain)
+    const playerWithSheets = {
+      carriedItem: new Item('sabanas'),
+      drop: () => null,
+    };
+    bed.onUseHold({ player: playerWithSheets as any, cell: { col: 2, row: 2 } }, 1.0);
+    vs = bed.getVisualState();
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.kind).toBe('limpieza');
+    expect(vs.stain).toBeCloseTo(0.5, 2); // 1 - (1.0 / 2.0)
+
+    // 7. Código Azul
+    bed.hasCodeBlue = true;
+    bed.codeBlueWorkers = 1;
+    bed.codeBlueRequiredWorkers = 2;
+    bed.codeBlueProgress = 0.4;
+    vs = bed.getVisualState();
+    expect(vs.activity).toBe('alert');
+    expect(vs.badge).toBe('warning');
+    expect(vs.workers?.current).toBe(1);
+    expect(vs.workers?.required).toBe(2);
+    expect(vs.progress?.kind).toBe('alerta');
+  });
 });

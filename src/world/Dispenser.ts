@@ -2,6 +2,7 @@ import type { GridPos } from '../levels/LevelLoader';
 import type { Interactable, InteractionContext } from './Interactable';
 import { Item } from '../items/Item';
 import type { ItemType } from '../items/ItemType';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export interface DispenserConfig {
   type: string;
@@ -20,7 +21,7 @@ export const DISPENSER_CONFIGS: Record<string, DispenserConfig> = {
 /**
  * Estación dispensadora de suministros infinitos.
  */
-export class Dispenser implements Interactable {
+export class Dispenser implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type: string;
   private currentItemType: ItemType;
@@ -55,5 +56,16 @@ export class Dispenser implements Interactable {
 
   public canInteract(ctx: InteractionContext): boolean {
     return !ctx.player.hasItem() || (this.alternateItemTypes !== undefined && this.alternateItemTypes.length > 1);
+  }
+
+  public getVisualState(): VisualState {
+    const showItem = this.type === 'M' || (this.alternateItemTypes !== undefined && this.alternateItemTypes.length > 0);
+    return {
+      variant: 'base',
+      activity: 'idle',
+      item: showItem ? { type: this.currentItemType } : null,
+      progress: null,
+      badge: null,
+    };
   }
 }

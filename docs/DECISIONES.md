@@ -22,3 +22,9 @@ Formato: **DEC-###** · fecha · decisión · motivo. Añade las nuevas al final
 | DEC-016 | Dash inmune a charcos; camilla bloquea dash. | Da utilidad táctica al dash y evita saltarse la cooperación. |
 | DEC-017 | Escalado de dificultad por nº de jugadores definido en NIVELES.md. | Mantener el reto razonable de 1 a 4 jugadores. |
 | DEC-018 | Celda (18, 1) en Nivel 2 fijada como pared (`#`) en vez de suelo (`.`). | Estaba atrapada entre la pared superior, la mesa `Q` y el desfibrilador `F`, haciéndola inalcanzable para los jugadores. |
+| DEC-019 | Contrato `VisualState` como interfaz pura (sin Phaser) expuesta por cada `Interactable` vía `getVisualState()`. | Mantiene la regla de lógica pura testeable; la vista Phaser (`StationView`) solo lee y dibuja. Un componente genérico evita N vistas especializadas. |
+| DEC-020 | `StationView` como componente Phaser genérico (1 por interactuable) en vez de subclases por tipo de estación. | Reduce duplicación; las diferencias visuales se resuelven con los datos de `VisualState` (variante de textura, tipo de progreso, badges, slots). |
+| DEC-021 | Texturas variantes generadas como claves separadas (`station-K-activa`, `station-B-sucia`, etc.) en vez de tinting dinámico. | El tinting de Phaser no soporta efectos complejos (patrones de suciedad, marcos coloreados); las texturas pregeneradas son nítidas y permiten detalle por estado. |
+| DEC-022 | `WorldProgressBar` como componente reutilizable independiente (no parte de `StationView`). | Se reutiliza para NPCs (Fase 9) y deterioro (Fase 10); la barra de la camilla y la de paciencia del paciente ya existen como ad-hoc, en el futuro podrán migrarse. |
+| DEC-023 | Feedback de acción inválida (sacudida + contorno rojo + SFX) gestionado desde `StationView` vía un método `rejectInteraction()` invocado por `GameScene`. | Centraliza la animación de rechazo sin contaminar la lógica pura de los interactuables. |
+

@@ -5,6 +5,7 @@ import { ProgressTimer } from '../core/ProgressTimer';
 import { SURGERY_DURATION_SEC } from '../config/constants';
 import type { Patient } from '../patients/Patient';
 import type { Stretcher } from './Stretcher';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export type SurgeryStep = 'esperando_suministros' | 'listo_para_operar' | 'operando' | 'completado';
 
@@ -19,7 +20,7 @@ export type SurgeryStep = 'esperando_suministros' | 'listo_para_operar' | 'opera
  * - 1 jugador manteniendo 'use' en modo solitario.
  * Produce 1 `instrumental_sucio` al terminar.
  */
-export class SurgeryTable implements Interactable {
+export class SurgeryTable implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'Q';
 
@@ -154,5 +155,44 @@ export class SurgeryTable implements Interactable {
     if (ctx.player.carriedItem?.type === 'instrumental_limpio' && !this.hasCleanInstrument) return true;
     if (ctx.player.carriedItem?.type === 'anestesia' && !this.hasAnesthesia) return true;
     return this.isReadyToOperate;
+  }
+
+  public getVisualState(): VisualState {
+    const totalPlayers = this.getTotalPlayersFn();
+    const requiredSurgeons = totalPlayers > 1 ? 2 : 1;
+
+    let activity: VisualState['activity'] = 'idle';
+    if (this.storedDirtyInstrument) {
+      activity = 'done';
+    } else if (this.isOperating) {
+      activity = 'working';
+    } else if (this.isReadyToOperate || this.hasCleanInstrument || this.hasAnesthesia) {
+      activity = 'loaded';
+    }
+
+    const slots = [
+      this.hasCleanInstrument ? { type: 'instrumental_limpio' as const } : null,
+      this.hasAnesthesia ? { type: 'anestesia' as const } : null,
+    ];
+
+    const workers = (this.isReadyToOperate || this.isOperating)
+      ? { current: this.operatingPlayerIds.size, required: requiredSurgeons }
+      : null;
+
+    const progress = (this.isOperating || this.surgeryTimer.progress > 0)
+      ? { value: this.surgeryTimer.progress, kind: 'proceso' as const }
+      : null;
+
+    const badge = this.storedDirtyInstrument ? 'check' as const : null;
+
+    return {
+      variant: this.isOperating ? 'activa' : 'base',
+      activity,
+      item: this.storedDirtyInstrument ? { type: this.storedDirtyInstrument.type } : null,
+      slots,
+      workers,
+      progress,
+      badge,
+    };
   }
 }

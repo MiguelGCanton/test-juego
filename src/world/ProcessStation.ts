@@ -4,6 +4,7 @@ import { Counter } from './Counter';
 import { Item } from '../items/Item';
 import type { ItemType } from '../items/ItemType';
 import { ProgressTimer } from '../core/ProgressTimer';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 export interface ProcessConfig {
   input: ItemType;
@@ -20,10 +21,11 @@ export const PROCESS_STATION_CONFIGS: Record<string, ProcessConfig> = {
 /**
  * Estación de procesamiento de suministros mediante pulsación mantenida de Usar.
  */
-export class ProcessStation extends Counter implements Interactable {
+export class ProcessStation extends Counter implements Interactable, VisualStateProvider {
   public readonly config: ProcessConfig;
   public timer: ProgressTimer;
   public isProcessing = false;
+  public isDisabled = false;
   public onComplete?: () => void;
 
   constructor(cell: GridPos, char: string, customConfig?: ProcessConfig, onComplete?: () => void) {
@@ -55,6 +57,11 @@ export class ProcessStation extends Counter implements Interactable {
   }
 
   public onUseHold(_ctx: InteractionContext, deltaSec: number): void {
+    if (this.isDisabled) {
+      this.isProcessing = false;
+      return;
+    }
+
     if (!this.storedItem || this.storedItem.type !== this.config.input) {
       this.isProcessing = false;
       return;
@@ -76,8 +83,72 @@ export class ProcessStation extends Counter implements Interactable {
   }
 
   public override canInteract(ctx: InteractionContext): boolean {
+    if (this.isDisabled) return false;
     if (super.canInteract(ctx)) return true;
     // Si tiene el ítem de entrada depositado, se puede interactuar con 'use'
     return this.storedItem?.type === this.config.input;
+  }
+
+  public override getVisualState(): VisualState {
+    if (this.isDisabled) {
+      return {
+        variant: 'disabled',
+        activity: 'disabled',
+        item: this.storedItem ? { type: this.storedItem.type } : null,
+        progress: null,
+        badge: 'bolt',
+      };
+    }
+
+    // Si tiene el ítem de salida terminado
+    if (this.storedItem && this.storedItem.type === this.config.output) {
+      return {
+        variant: 'base',
+        activity: 'done',
+        item: { type: this.storedItem.type },
+        progress: null,
+        badge: 'check',
+      };
+    }
+
+    // Si tiene el ítem de entrada
+    if (this.storedItem && this.storedItem.type === this.config.input) {
+      if (this.isProcessing) {
+        return {
+          variant: 'activa',
+          activity: 'working',
+          item: { type: this.storedItem.type },
+          progress: { value: this.timer.progress, kind: 'proceso' },
+          badge: null,
+        };
+      }
+
+      if (this.timer.progress > 0) {
+        return {
+          variant: 'base',
+          activity: 'paused',
+          item: { type: this.storedItem.type },
+          progress: { value: this.timer.progress, kind: 'proceso' },
+          badge: null,
+        };
+      }
+
+      return {
+        variant: 'base',
+        activity: 'loaded',
+        item: { type: this.storedItem.type },
+        progress: null,
+        badge: null,
+      };
+    }
+
+    // Encimera normal con otro ítem o vacía
+    return {
+      variant: 'base',
+      activity: this.hasItem() ? 'loaded' : 'idle',
+      item: this.storedItem ? { type: this.storedItem.type } : null,
+      progress: null,
+      badge: null,
+    };
   }
 }

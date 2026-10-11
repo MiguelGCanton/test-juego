@@ -5,12 +5,13 @@ import { XRAY_PROCESS_TIME_SEC } from '../config/constants';
 import type { Patient } from '../patients/Patient';
 import type { Stretcher } from './Stretcher';
 import { canPerformXRay } from './StretcherLogic';
+import type { VisualState, VisualStateProvider } from './VisualState';
 
 /**
  * Estación de Rayos X 'X'.
  * Escanea pacientes con fractura colocados en una camilla adyacente tras mantener 'use' durante 4 segundos.
  */
-export class XRayStation implements Interactable {
+export class XRayStation implements Interactable, VisualStateProvider {
   public readonly cell: GridPos;
   public readonly type = 'X';
   public readonly timer = new ProgressTimer(XRAY_PROCESS_TIME_SEC);
@@ -76,5 +77,28 @@ export class XRayStation implements Interactable {
       canPerformXRay(stretcher.patient) &&
       stretcher.isAdjacentToCell(this.cell)
     );
+  }
+
+  public getVisualState(): VisualState {
+    const isWorking = this.isScanning;
+    const isPaused = !this.isScanning && this.timer.progress > 0;
+
+    let activity: VisualState['activity'] = 'idle';
+    if (isWorking) {
+      activity = 'working';
+    } else if (isPaused) {
+      activity = 'paused';
+    }
+
+    const progress = (isWorking || isPaused)
+      ? { value: this.timer.progress, kind: 'proceso' as const }
+      : null;
+
+    return {
+      variant: isWorking ? 'activa' : 'base',
+      activity,
+      progress,
+      badge: null,
+    };
   }
 }

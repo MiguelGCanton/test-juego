@@ -80,4 +80,42 @@ describe('Autoclave (Estación A)', () => {
     expect(auto.state).toBe('vacio');
     expect(auto.storedItem).toBeNull();
   });
+
+  it('devuelve el VisualState adecuado para todas las variantes (T-39)', () => {
+    const auto = new Autoclave({ col: 18, row: 5 });
+
+    // 1. Vacío
+    let vs = auto.getVisualState();
+    expect(vs.variant).toBe('vacio');
+    expect(vs.activity).toBe('idle');
+    expect(vs.progress).toBeNull();
+    expect(vs.badge).toBeNull();
+
+    // 2. Esterilizando (proceso en curso)
+    auto.placeItem(new Item('instrumental_mojado'));
+    auto.update(4.0);
+    vs = auto.getVisualState();
+    expect(vs.variant).toBe('esterilizando');
+    expect(vs.activity).toBe('working');
+    expect(vs.progress?.kind).toBe('proceso');
+    expect(vs.progress?.value).toBeCloseTo(0.5, 2);
+
+    // 3. Listo (barra de contaminación creciente)
+    auto.update(4.0);
+    auto.update(5.0);
+    vs = auto.getVisualState();
+    expect(vs.variant).toBe('listo');
+    expect(vs.activity).toBe('done');
+    expect(vs.badge).toBe('check');
+    expect(vs.progress?.kind).toBe('alerta');
+    expect(vs.progress?.value).toBeCloseTo(5 / 20, 2);
+
+    // 4. Contaminado
+    auto.update(16.0);
+    vs = auto.getVisualState();
+    expect(vs.variant).toBe('contaminado');
+    expect(vs.activity).toBe('alert');
+    expect(vs.badge).toBe('warning');
+    expect(vs.item?.type).toBe('instrumental_sucio');
+  });
 });
